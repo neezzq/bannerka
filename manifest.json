@@ -1,0 +1,19 @@
+{
+  "id": "./index.html",
+  "name": "Доклады и презентации на заказ",
+  "short_name": "Доклады",
+  "description": "Заказ докладов, презентаций и текстов выступлений с мгновенным расчётом цены.",
+  "lang": "ru",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f6fb",
+  "theme_color": "#f7f6fb",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

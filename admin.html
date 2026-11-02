@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Админка — заявки</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#ffffff">
+
+  <link rel="manifest" href="admin-manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/admin-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/admin-apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Заказы">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body class="admin">
+
+<!-- Вход -->
+<div class="login" id="loginView" hidden>
+  <form class="login-box card" id="loginForm">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+    </span></div>
+    <h1>Вход в админку</h1>
+    <p>Пароль запомнится на этом устройстве</p>
+    <div class="field">
+      <label for="loginPw">Пароль</label>
+      <input id="loginPw" type="password" autocomplete="current-password" required>
+    </div>
+    <div class="form-error" id="loginError" hidden></div>
+    <button class="btn btn-primary btn-lg btn-block" type="submit" id="loginBtn">Войти</button>
+  </form>
+</div>
+
+<!-- Приложение -->
+<div id="appView" hidden>
+  <header class="admin-top">
+    <div class="wrap admin-top-in">
+      <span class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></svg>
+        </span>
+        Заказы
+      </span>
+      <nav class="top-tabs" aria-label="Разделы">
+        <button type="button" class="top-tab" data-tab="orders">Заявки</button>
+        <button type="button" class="top-tab" data-tab="prices">Цены</button>
+        <button type="button" class="top-tab" data-tab="report">Итоги</button>
+      </nav>
+      <button type="button" class="icon-btn" id="refreshBtn" title="Обновить" aria-label="Обновить">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      </button>
+      <button type="button" class="icon-btn" id="logoutBtn" title="Выйти" aria-label="Выйти">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="wrap admin-main">
+    <!-- Заявки -->
+    <section data-panel="orders">
+      <div class="stats" id="stats"></div>
+      <div class="toolbar">
+        <div class="chips" id="chips" role="tablist" aria-label="Фильтр по статусу"></div>
+        <label class="search">
+          <span class="visually-hidden">Поиск</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input class="input" type="search" id="search" placeholder="Имя, тема или контакт" autocomplete="off">
+        </label>
+      </div>
+      <div class="orders" id="ordersList"><div class="loading">Загрузка…</div></div>
+    </section>
+
+    <!-- Цены -->
+    <section data-panel="prices" hidden>
+      <h1 class="tab-title">Цены и тексты</h1>
+      <div class="prices-cols">
+        <div>
+          <div class="panel card">
+            <h2>Услуги</h2>
+            <p class="panel-desc">Цена = цена за единицу × объём, но не меньше минимума.</p>
+            <div class="edit-list" id="svcList"></div>
+            <button type="button" class="btn btn-soft add-btn" id="addSvc">+ Добавить услугу</button>
+          </div>
+        </div>
+        <div>
+          <div class="panel card">
+            <h2>Дополнительные опции</h2>
+            <p class="panel-desc">Прибавляются к цене, если клиент их отметил.</p>
+            <div class="edit-list" id="optList"></div>
+            <button type="button" class="btn btn-soft add-btn" id="addOpt">+ Добавить опцию</button>
+          </div>
+          <div class="panel card">
+            <h2>Срочность и предоплата</h2>
+            <div class="inline-fields">
+              <div class="field">
+                <label for="urgDays">Если до срока меньше, дн.</label>
+                <input id="urgDays" type="text" inputmode="numeric" data-cfg>
+              </div>
+              <div class="field">
+                <label for="urgPercent">Наценка, %</label>
+                <input id="urgPercent" type="text" inputmode="numeric" data-cfg>
+              </div>
+              <div class="field">
+                <label for="prepay">Предоплата, %</label>
+                <input id="prepay" type="text" inputmode="numeric" data-cfg>
+              </div>
+            </div>
+          </div>
+          <div class="panel card">
+            <h2>Тексты сайта</h2>
+            <div class="texts-grid">
+              <div class="field">
+                <label for="tTitle">Заголовок</label>
+                <input id="tTitle" maxlength="120" data-cfg>
+              </div>
+              <div class="field">
+                <label for="tSubtitle">Подзаголовок</label>
+                <textarea id="tSubtitle" maxlength="400" data-cfg></textarea>
+              </div>
+              <div class="field">
+                <label for="tContact">Мой контакт</label>
+                <input id="tContact" maxlength="100" placeholder="@username или телефон" data-cfg>
+              </div>
+              <div class="field">
+                <label for="tNote">Примечание под ценой</label>
+                <textarea id="tNote" maxlength="600" data-cfg></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="save-bar">
+        <span id="pricesState">Изменений нет</span>
+        <button type="button" class="btn btn-primary" id="savePrices">Сохранить</button>
+      </div>
+    </section>
+
+    <!-- Итоги -->
+    <section data-panel="report" hidden>
+      <div class="report-head">
+        <h1 class="tab-title">Итоги</h1>
+        <label class="visually-hidden" for="yearSelect">Год</label>
+        <select class="input" id="yearSelect"></select>
+        <button type="button" class="btn btn-ghost" id="copyReport">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>
+          Скопировать в Excel
+        </button>
+      </div>
+      <div class="card table-wrap">
+        <table class="report-table" id="reportTable"></table>
+      </div>
+      <p class="muted" style="font-size:13px;margin-top:10px">Месяц определяется по дате заявки. «Сумма заказов» и «Средний чек» — без отменённых. Прибыль = получено − расходы.</p>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Разделы">
+    <button type="button" class="bottom-tab" data-tab="orders">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+      Заявки
+    </button>
+    <button type="button" class="bottom-tab" data-tab="prices">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>
+      Цены
+    </button>
+    <button type="button" class="bottom-tab" data-tab="report">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-8"/></svg>
+      Итоги
+    </button>
+  </nav>
+</div>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(function () {
+  'use strict';
+  var A = window.App;
+  var $ = function (id) { return document.getElementById(id); };
+  var PW_KEY = 'zk_admin_pw';
+  var TAB_KEY = 'zk_admin_tab';
+
+  var state = {
+    password: A.lsGet(PW_KEY, ''),
+    orders: [],
+    config: null,
+    filter: 'active',
+    search: '',
+    tab: A.lsGet(TAB_KEY, 'orders'),
+    pricesDirty: false
+  };
+
+  A.mountDemoBanner();
+
+  /* ===== Вход / выход ===== */
+
+  function showLogin(message) {
+    $('appView').hidden = true;
+    $('loginView').hidden = false;
+    $('loginError').hidden = !message;
+    $('loginError').textContent = message || '';
+    if (A.DEMO && !message) $('loginPw').placeholder = 'В демо-режиме: demo';
+    setTimeout(function () { $('loginPw').focus(); }, 50);
+  }
+
+  function showApp() {
+    $('loginView').hidden = true;
+    $('appView').hidden = false;
+    switchTab(state.tab);
+    A.showIosInstallHint('zk_ios_hint_admin', 'Заказы');
+  }
+
+  $('loginForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var pw = $('loginPw').value;
+    if (!pw) return;
+    var btn = $('loginBtn');
+    btn.disabled = true;
+    btn.textContent = 'Проверяем…';
+    $('loginError').hidden = true;
+    A.api('login', { password: pw }).then(function () {
+      state.password = pw;
+      A.lsSet(PW_KEY, pw);
+      $('loginPw').value = '';
+      showApp();
+      loadAll();
+    }).catch(function (err) {
+      $('loginError').textContent = err.message;
+      $('loginError').hidden = false;
+    }).then(function () {
+      btn.disabled = false;
+      btn.textContent = 'Войти';
+    });
+  });
+
+  $('logoutBtn').addEventListener('click', function () {
+    if (!confirm('Выйти из админки на этом устройстве?')) return;
+    A.lsDel(PW_KEY);
+    state.password = '';
+    state.orders = [];
+    showLogin();
+  });
+
+  function authApi(action, data) {
+    return A.api(action, Object.assign({ password: state.password }, data || {})).catch(function (err) {
+      if (err.code === 'auth') {
+        A.lsDel(PW_KEY);
+        state.password = '';
+        showLogin(err.message);
+      }
+      throw err;
+    });
+  }
+
+  /* ===== Вкладки ===== */
+
+  function switchTab(tab) {
+    if (['orders', 'prices', 'report'].indexOf(tab) === -1) tab = 'orders';
+    state.tab = tab;
+    A.lsSet(TAB_KEY, tab);
+    document.querySelectorAll('[data-panel]').forEach(function (p) { p.hidden = p.getAttribute('data-panel') !== tab; });
+    document.querySelectorAll('[data-tab]').forEach(function (b) {
+      var on = b.getAttribute('data-tab') === tab;
+      b.classList.toggle('active', on);
+      if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+    if (tab === 'report') renderReport();
+    window.scrollTo(0, 0);
+  }
+
+  document.querySelectorAll('[data-tab]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (state.tab === 'prices' && state.pricesDirty && b.getAttribute('data-tab') !== 'prices' &&
+          !confirm('Изменения в ценах не сохранены. Уйти со вкладки?')) return;
+      switchTab(b.getAttribute('data-tab'));
+    });
+  });
+
+  /* ===== Загрузка ===== */
+
+  function loadAll() {
+    var btn = $('refreshBtn');
+    btn.classList.add('spinning');
+    return Promise.all([
+      authApi('list').then(function (res) {
+        state.orders = (res.orders || []).map(normalizeOrder);
+        renderOrders();
+        if (state.tab === 'report') renderReport();
+      }),
+      A.api('config').then(function (res) {
+        if (!state.pricesDirty) {
+          state.config = A.normalizeConfig(res.config);
+          renderPricesEditor();
+        }
+      })
+    ]).catch(function (err) {
+      if (err.code !== 'auth') {
+        A.toast(err.message, 'error');
+        if (!state.orders.length) $('ordersList').innerHTML = '<div class="empty card"><b>Не удалось загрузить заявки</b>' + A.esc(err.message) + '</div>';
+      }
+    }).then(function () { btn.classList.remove('spinning'); });
+  }
+
+  $('refreshBtn').addEventListener('click', function () {
+    if (state.pricesDirty && state.tab === 'prices' && !confirm('Несохранённые изменения цен будут потеряны. Обновить?')) return;
+    state.pricesDirty = false;
+    loadAll().then(function () { A.toast('Обновлено'); });
+  });
+
+  function normalizeOrder(o) {
+    var r = {};
+    ['id', 'created', 'name', 'contact', 'service', 'volume', 'unit', 'topic', 'subject', 'grade', 'deadline',
+     'options', 'wishes', 'calcPrice', 'status', 'price', 'paid', 'expenses', 'notes'].forEach(function (k) {
+      r[k] = o[k] == null ? '' : String(o[k]);
+    });
+    if (!A.STATUSES.some(function (s) { return s.id === r.status; })) r.status = 'new';
+    return r;
+  }
+
+  /* ===== Расчёты ===== */
+
+  function isActive(o) { return A.ACTIVE_STATUSES.indexOf(o.status) !== -1; }
+  function profitOf(o) { return A.num(o.paid) - A.num(o.expenses); }
+  function debtOf(o) { return o.status === 'cancelled' ? 0 : Math.max(A.num(o.price) - A.num(o.paid), 0); }
+  function daysLeft(o) { return A.daysUntil(o.deadline); }
+
+  function sortOrders(list) {
+    return list.slice().sort(function (a, b) {
+      var aa = isActive(a), bb = isActive(b);
+      if (aa !== bb) return aa ? -1 : 1;
+      if (aa) {
+        var da = a.deadline || '9999', db = b.deadline || '9999';
+        if (da !== db) return da < db ? -1 : 1;
+        return (+a.id) - (+b.id);
+      }
+      if (a.created !== b.created) return a.created < b.created ? 1 : -1;
+      return (+b.id) - (+a.id);
+    });
+  }
+
+  /* ===== Итоги-карточки ===== */
+
+  function renderStats() {
+    var active = 0, fresh = 0, overdue = 0, debt = 0, month = 0, all = 0;
+    var monthKey = A.todayStr().slice(0, 7);
+    state.orders.forEach(function (o) {
+      if (isActive(o)) {
+        active++;
+        if (o.status === 'new') fresh++;
+        var d = daysLeft(o);
+        if (d !== null && d < 0) overdue++;
+      }
+      debt += debtOf(o);
+      var p = profitOf(o);
+      all += p;
+      if (o.created.slice(0, 7) === monthKey) month += p;
+    });
+    var monthName = new Date().toLocaleString('ru-RU', { month: 'long' });
+    $('stats').innerHTML =
+      stat('В работе', active, fresh ? 'из них новых: ' + fresh : 'новых нет', 'accent') +
+      stat('Просрочено', overdue, overdue ? 'проверьте сроки' : 'всё в срок', '', overdue ? 'red' : '') +
+      stat('Должны клиенты', A.money(debt), 'цена − оплачено') +
+      stat('Прибыль за месяц', A.money(month), monthName) +
+      stat('Прибыль за всё время', A.money(all), 'оплачено − расходы', 'stat-wide');
+  }
+
+  function stat(label, value, sub, cls, valueCls) {
+    return '<div class="stat card ' + (cls || '') + '"><div class="stat-label">' + A.esc(label) + '</div>' +
+      '<div class="stat-value ' + (valueCls || '') + '">' + A.esc(value) + '</div>' +
+      '<div class="stat-sub">' + A.esc(sub) + '</div></div>';
+  }
+
+  /* ===== Фильтры ===== */
+
+  var FILTERS = [{ id: 'active', label: 'Активные' }, { id: 'all', label: 'Все' }].concat(A.STATUSES);
+
+  function filterMatch(o, f) {
+    if (f === 'all') return true;
+    if (f === 'active') return isActive(o);
+    return o.status === f;
+  }
+
+  function renderChips() {
+    $('chips').innerHTML = FILTERS.map(function (f) {
+      var count = state.orders.filter(function (o) { return filterMatch(o, f.id); }).length;
+      return '<button type="button" class="chip' + (state.filter === f.id ? ' active' : '') + '" data-filter="' + f.id + '" role="tab" aria-selected="' + (state.filter === f.id) + '">' +
+        A.esc(f.label) + '<span class="count">' + count + '</span></button>';
+    }).join('');
+  }
+
+  $('chips').addEventListener('click', function (e) {
+    var chip = e.target.closest('[data-filter]');
+    if (!chip) return;
+    state.filter = chip.getAttribute('data-filter');
+    renderChips();
+    renderList();
+  });
+
+  var searchTimer;
+  $('search').addEventListener('input', function () {
+    clearTimeout(searchTimer);
+    var v = this.value;
+    searchTimer = setTimeout(function () { state.search = v.trim().toLowerCase(); renderList(); }, 120);
+  });
+
+  /* ===== Список заявок ===== */
+
+  function renderOrders() {
+    renderStats();
+    renderChips();
+    renderList();
+  }
+
+  function renderList() {
+    var q = state.search;
+    var list = sortOrders(state.orders.filter(function (o) {
+      if (!filterMatch(o, state.filter)) return false;
+      if (!q) return true;
+      return (o.name + ' ' + o.topic + ' ' + o.contact).toLowerCase().indexOf(q) !== -1;
+    }));
+    if (!list.length) {
+      var msg = state.orders.length
+        ? (q ? '<b>Ничего не найдено</b>Попробуйте изменить запрос или фильтр.' : '<b>Здесь пусто</b>Нет заявок с таким статусом.')
+        : '<b>Заявок пока нет</b>Они появятся здесь, как только клиенты заполнят форму на сайте.';
+      $('ordersList').innerHTML = '<div class="empty card" style="grid-column:1/-1">' + msg + '</div>';
+      return;
+    }
+    $('ordersList').innerHTML = list.map(cardHtml).join('');
+  }
+
+  function findOrder(id) {
+    for (var i = 0; i < state.orders.length; i++) if (state.orders[i].id === id) return state.orders[i];
+    return null;
+  }
+
+  function deadlineBadge(o) {
+    if (!isActive(o) || !o.deadline) return '';
+    var d = daysLeft(o);
+    if (d === null) return '';
+    if (d < 0) return '<span class="badge badge-bad">просрочено на ' + (-d) + ' ' + A.plural(-d, ['день', 'дня', 'дней']) + '</span>';
+    if (d === 0) return '<span class="badge badge-warn">сегодня</span>';
+    return '<span class="badge ' + (d <= 2 ? 'badge-warn' : 'badge-ok') + '">осталось ' + d + ' дн.</span>';
+  }
+
+  function calcHtml(o) {
+    var profit = profitOf(o), debt = debtOf(o);
+    return 'Прибыль: <b class="' + (profit > 0 ? 'pos' : profit < 0 ? 'neg' : '') + '">' + A.money(profit) + '</b>' +
+      '<span>Долг: <b class="' + (debt > 0 ? 'neg' : '') + '">' + A.money(debt) + '</b></span>';
+  }
+
+  function cardHtml(o) {
+    var href = A.contactHref(o.contact);
+    var contact = href
+      ? '<a class="order-contact" href="' + A.esc(href) + '"' + (href.indexOf('http') === 0 ? ' target="_blank" rel="noopener"' : '') + '>' + A.esc(o.contact) + '</a>'
+      : '<span class="order-contact">' + A.esc(o.contact) + '</span>';
+    var vol = o.volume ? o.volume + ' ' + A.unitText(o.unit, A.num(o.volume)) : '';
+    var statusOpts = A.STATUSES.map(function (s) {
+      return '<option value="' + s.id + '"' + (s.id === o.status ? ' selected' : '') + '>' + s.label + '</option>';
+    }).join('');
+    var id = A.esc(o.id);
+    var details = [
+      ['Предмет', o.subject], ['Класс / курс', o.grade], ['Опции', o.options],
+      ['Пожелания', o.wishes], ['Цена сайта', o.calcPrice ? A.money(o.calcPrice) : ''], ['Создано', o.created]
+    ].filter(function (r) { return r[1]; }).map(function (r) {
+      return '<dt>' + r[0] + '</dt><dd>' + A.esc(r[1]) + '</dd>';
+    }).join('');
+
+    return '<article class="order card st-' + o.status + '" data-id="' + id + '">' +
+      '<div class="order-head"><div style="min-width:0">' +
+        '<div class="order-no">№' + id + ' · ' + A.esc(A.fmtDate(o.created)) + '</div>' +
+        '<div class="order-name">' + A.esc(o.name) + '</div>' + contact +
+      '</div>' +
+      '<select class="status-select" aria-label="Статус заявки №' + id + '">' + statusOpts + '</select></div>' +
+      '<div class="order-body">' +
+        '<div class="order-service">' + A.esc(o.service) + (vol ? ' · ' + A.esc(vol) : '') + '</div>' +
+        (o.topic ? '<div class="order-topic">' + A.esc(o.topic) + '</div>' : '') +
+        '<div class="order-deadline">Срок: ' + A.esc(A.fmtDate(o.deadline) || '—') + ' <span class="dl-badge">' + deadlineBadge(o) + '</span></div>' +
+      '</div>' +
+      '<div class="money-grid">' +
+        moneyInput('price', 'Цена', o.price, id) +
+        moneyInput('paid', 'Оплачено', o.paid, id) +
+        moneyInput('expenses', 'Расходы', o.expenses, id) +
+      '</div>' +
+      '<div class="field notes"><label class="visually-hidden" for="n-' + id + '">Заметки</label>' +
+        '<textarea id="n-' + id + '" data-k="notes" placeholder="Мои заметки">' + A.esc(o.notes) + '</textarea></div>' +
+      '<div class="order-calc">' + calcHtml(o) + '</div>' +
+      (details ? '<details><summary>Подробнее</summary><dl class="details-grid">' + details + '</dl></details>' : '') +
+      '<div class="order-actions">' +
+        '<button type="button" class="btn btn-primary btn-sm save-btn">Сохранить</button>' +
+        '<span class="spacer"></span>' +
+        '<button type="button" class="btn btn-danger btn-sm del-btn">Удалить</button>' +
+      '</div>' +
+    '</article>';
+  }
+
+  function moneyInput(key, label, value, id) {
+    return '<div class="field"><label for="' + key + '-' + id + '">' + label + ', ₽</label>' +
+      '<input id="' + key + '-' + id + '" data-k="' + key + '" type="text" inputmode="numeric" autocomplete="off" value="' + A.esc(value) + '" placeholder="0"></div>';
+  }
+
+  function cardOf(el) { return el.closest('.order'); }
+
+  function readCard(card) {
+    var r = {};
+    card.querySelectorAll('[data-k]').forEach(function (el) { r[el.getAttribute('data-k')] = el.value; });
+    return r;
+  }
+
+  // Статус сохраняется сразу
+  $('ordersList').addEventListener('change', function (e) {
+    if (!e.target.classList.contains('status-select')) return;
+    var card = cardOf(e.target);
+    var o = findOrder(card.getAttribute('data-id'));
+    var prev = o.status;
+    var next = e.target.value;
+    o.status = next;
+    applyStatusToCard(card, o);
+    renderStats();
+    renderChips();
+    authApi('update', { id: o.id, fields: { status: next } }).then(function () {
+      A.toast('Статус: ' + A.statusLabel(next));
+    }).catch(function (err) {
+      o.status = prev;
+      e.target.value = prev;
+      applyStatusToCard(card, o);
+      renderStats();
+      renderChips();
+      if (err.code !== 'auth') A.toast(err.message, 'error');
+    });
+  });
+
+  function applyStatusToCard(card, o) {
+    var dirty = card.classList.contains('dirty');
+    card.className = 'order card st-' + o.status + (dirty ? ' dirty' : '');
+    card.querySelector('.dl-badge').innerHTML = deadlineBadge(o);
+    updateCalc(card, o);
+  }
+
+  function updateCalc(card, o) {
+    var v = readCard(card);
+    var preview = Object.assign({}, o, { price: v.price, paid: v.paid, expenses: v.expenses });
+    card.querySelector('.order-calc').innerHTML = calcHtml(preview);
+  }
+
+  // Прибыль и долг пересчитываются при вводе
+  $('ordersList').addEventListener('input', function (e) {
+    if (!e.target.hasAttribute('data-k')) return;
+    var card = cardOf(e.target);
+    card.classList.add('dirty');
+    updateCalc(card, findOrder(card.getAttribute('data-id')));
+  });
+
+  $('ordersList').addEventListener('click', function (e) {
+    var save = e.target.closest('.save-btn');
+    var del = e.target.closest('.del-btn');
+    if (!save && !del) return;
+    var card = cardOf(e.target);
+    var o = findOrder(card.getAttribute('data-id'));
+    if (save) saveCard(card, o, save);
+    if (del) deleteOrder(card, o, del);
+  });
+
+  function saveCard(card, o, btn) {
+    var v = readCard(card);
+    btn.disabled = true;
+    btn.textContent = 'Сохраняю…';
+    authApi('update', { id: o.id, fields: { price: v.price, paid: v.paid, expenses: v.expenses, notes: v.notes } })
+      .then(function (res) {
+        var upd = normalizeOrder(res.order || Object.assign({}, o, v));
+        Object.assign(o, upd);
+        card.querySelectorAll('[data-k]').forEach(function (el) { el.value = o[el.getAttribute('data-k')]; });
+        card.classList.remove('dirty');
+        updateCalc(card, o);
+        renderStats();
+        A.toast('Сохранено');
+      })
+      .catch(function (err) { if (err.code !== 'auth') A.toast(err.message, 'error'); })
+      .then(function () { btn.disabled = false; btn.textContent = 'Сохранить'; });
+  }
+
+  function deleteOrder(card, o, btn) {
+    if (!confirm('Удалить заявку №' + o.id + ' (' + o.name + ')?\nЭто действие нельзя отменить.')) return;
+    btn.disabled = true;
+    authApi('delete', { id: o.id }).then(function () {
+      state.orders = state.orders.filter(function (x) { return x !== o; });
+      card.remove();
+      renderStats();
+      renderChips();
+      if (!$('ordersList').querySelector('.order')) renderList();
+      A.toast('Заявка удалена');
+    }).catch(function (err) {
+      btn.disabled = false;
+      if (err.code !== 'auth') A.toast(err.message, 'error');
+    });
+  }
+
+  /* ===== Цены ===== */
+
+  function unitSelect(value) {
+    var units = A.UNITS.slice();
+    if (value && units.indexOf(value) === -1) units.push(value);
+    return '<select data-k="unit">' + units.map(function (u) {
+      return '<option value="' + A.esc(u) + '"' + (u === value ? ' selected' : '') + '>' + A.esc(u) + '</option>';
+    }).join('') + '</select>';
+  }
+
+  function svcHtml(s, i) {
+    return '<div class="edit-item" data-id="' + A.esc(s.id) + '">' +
+      '<div class="edit-head"><b>Услуга ' + (i + 1) + '</b><button type="button" class="btn btn-danger btn-sm" data-remove>Удалить</button></div>' +
+      '<div class="field"><label>Название</label><input data-k="name" maxlength="80" value="' + A.esc(s.name) + '"></div>' +
+      '<div class="edit-row">' +
+        '<div class="field"><label>Единица</label>' + unitSelect(s.unit) + '</div>' +
+        '<div class="field"><label>Цена за ед., ₽</label><input data-k="price" inputmode="numeric" value="' + A.esc(s.price) + '"></div>' +
+        '<div class="field"><label>Минимум, ₽</label><input data-k="min" inputmode="numeric" value="' + A.esc(s.min) + '"></div>' +
+      '</div>' +
+      '<div class="field"><label>Описание</label><textarea data-k="desc" maxlength="400" style="min-height:72px">' + A.esc(s.desc) + '</textarea></div>' +
+    '</div>';
+  }
+
+  function optHtml(o) {
+    return '<div class="edit-item" data-id="' + A.esc(o.id) + '"><div class="edit-row-opt">' +
+      '<div class="field"><label>Название</label><input data-k="name" maxlength="80" value="' + A.esc(o.name) + '"></div>' +
+      '<div class="field"><label>Цена, ₽</label><input data-k="price" inputmode="numeric" value="' + A.esc(o.price) + '"></div>' +
+      '<button type="button" class="btn btn-danger btn-icon" data-remove aria-label="Удалить опцию">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>' +
+      '</button></div></div>';
+  }
+
+  function renderPricesEditor() {
+    var c = state.config;
+    if (!c) return;
+    $('svcList').innerHTML = c.services.map(svcHtml).join('');
+    $('optList').innerHTML = c.options.length ? c.options.map(optHtml).join('') : '<p class="muted" style="font-size:14px">Опций нет.</p>';
+    $('urgDays').value = c.urgency.days;
+    $('urgPercent').value = c.urgency.percent;
+    $('prepay').value = c.prepay;
+    $('tTitle').value = c.heroTitle;
+    $('tSubtitle').value = c.heroSubtitle;
+    $('tContact').value = c.contact;
+    $('tNote').value = c.note;
+    setPricesDirty(false);
+  }
+
+  function readPricesEditor() {
+    function items(listId, keys) {
+      return Array.prototype.map.call($(listId).querySelectorAll('.edit-item'), function (el) {
+        var r = { id: el.getAttribute('data-id') };
+        keys.forEach(function (k) { r[k] = el.querySelector('[data-k="' + k + '"]').value; });
+        return r;
+      });
+    }
+    return {
+      services: items('svcList', ['name', 'unit', 'price', 'min', 'desc']),
+      options: items('optList', ['name', 'price']),
+      urgency: { days: $('urgDays').value, percent: $('urgPercent').value },
+      prepay: $('prepay').value,
+      heroTitle: $('tTitle').value,
+      heroSubtitle: $('tSubtitle').value,
+      contact: $('tContact').value,
+      note: $('tNote').value
+    };
+  }
+
+  function setPricesDirty(on) {
+    state.pricesDirty = on;
+    $('pricesState').textContent = on ? 'Есть несохранённые изменения' : 'Изменений нет';
+    $('pricesState').style.color = on ? 'var(--amber)' : '';
+  }
+
+  function renumberServices() {
+    $('svcList').querySelectorAll('.edit-head b').forEach(function (b, i) { b.textContent = 'Услуга ' + (i + 1); });
+  }
+
+  document.querySelector('[data-panel="prices"]').addEventListener('input', function () { setPricesDirty(true); });
+  document.querySelector('[data-panel="prices"]').addEventListener('change', function () { setPricesDirty(true); });
+
+  document.querySelector('[data-panel="prices"]').addEventListener('click', function (e) {
+    var rm = e.target.closest('[data-remove]');
+    if (!rm) return;
+    var item = rm.closest('.edit-item');
+    var isSvc = item.parentNode.id === 'svcList';
+    if (isSvc && $('svcList').querySelectorAll('.edit-item').length <= 1) {
+      A.toast('Должна остаться хотя бы одна услуга', 'error');
+      return;
+    }
+    var name = item.querySelector('[data-k="name"]').value || 'без названия';
+    if (!confirm('Удалить «' + name + '»?')) return;
+    item.remove();
+    if (isSvc) renumberServices();
+    setPricesDirty(true);
+  });
+
+  $('addSvc').addEventListener('click', function () {
+    var n = $('svcList').querySelectorAll('.edit-item').length;
+    $('svcList').insertAdjacentHTML('beforeend', svcHtml({ id: A.uid('s'), name: '', unit: 'стр.', price: 100, min: 500, desc: '' }, n));
+    var items = $('svcList').querySelectorAll('.edit-item');
+    items[items.length - 1].querySelector('[data-k="name"]').focus();
+    setPricesDirty(true);
+  });
+
+  $('addOpt').addEventListener('click', function () {
+    var p = $('optList').querySelector('p');
+    if (p) p.remove();
+    $('optList').insertAdjacentHTML('beforeend', optHtml({ id: A.uid('o'), name: '', price: 100 }));
+    var items = $('optList').querySelectorAll('.edit-item');
+    items[items.length - 1].querySelector('[data-k="name"]').focus();
+    setPricesDirty(true);
+  });
+
+  function isNonNegNumber(v) { return /^\s*\d+([.,]\d+)?\s*$/.test(String(v)); }
+
+  $('savePrices').addEventListener('click', function () {
+    var raw = readPricesEditor();
+    var problems = [];
+    raw.services.forEach(function (s, i) {
+      if (!s.name.trim()) problems.push('Укажите название услуги ' + (i + 1));
+      if (!isNonNegNumber(s.price) || !isNonNegNumber(s.min)) problems.push('Проверьте цены у услуги ' + (i + 1));
+    });
+    raw.options.forEach(function (o, i) {
+      if (!o.name.trim()) problems.push('Укажите название опции ' + (i + 1));
+      if (!isNonNegNumber(o.price)) problems.push('Проверьте цену опции ' + (i + 1));
+    });
+    [raw.urgency.days, raw.urgency.percent, raw.prepay].forEach(function (v) {
+      if (!isNonNegNumber(v)) problems.push('Срочность и предоплата — только числа');
+    });
+    if (A.num(raw.prepay) > 100) problems.push('Предоплата не может быть больше 100%');
+    if (problems.length) { A.toast(problems[0], 'error'); return; }
+
+    var cfg = A.normalizeConfig(raw);
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Сохраняю…';
+    authApi('saveConfig', { config: cfg }).then(function (res) {
+      state.config = A.normalizeConfig(res.config || cfg);
+      A.lsSet('zk_config_cache', state.config);
+      renderPricesEditor();
+      A.toast('Цены сохранены — сайт уже показывает новые');
+    }).catch(function (err) {
+      if (err.code !== 'auth') A.toast(err.message, 'error');
+    }).then(function () { btn.disabled = false; btn.textContent = 'Сохранить'; });
+  });
+
+  window.addEventListener('beforeunload', function (e) {
+    var dirtyCard = document.querySelector('.order.dirty');
+    if (state.pricesDirty || dirtyCard) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  /* ===== Итоги ===== */
+
+  var MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+  var REPORT_COLS = ['Месяц', 'Заказов', 'Сдано', 'Сумма заказов', 'Получено', 'Расходы', 'Прибыль', 'Средний чек'];
+
+  function fillYears() {
+    var current = String(new Date().getFullYear());
+    var years = {};
+    years[current] = true;
+    state.orders.forEach(function (o) { var y = o.created.slice(0, 4); if (/^\d{4}$/.test(y)) years[y] = true; });
+    var list = Object.keys(years).sort().reverse();
+    var sel = $('yearSelect');
+    var prev = sel.value || current;
+    sel.innerHTML = list.map(function (y) { return '<option value="' + y + '">' + y + '</option>'; }).join('');
+    sel.value = list.indexOf(prev) !== -1 ? prev : current;
+  }
+
+  function reportData(year) {
+    var rows = MONTHS.map(function (name) {
+      return { name: name, count: 0, done: 0, sum: 0, sumCount: 0, received: 0, expenses: 0 };
+    });
+    state.orders.forEach(function (o) {
+      if (o.created.slice(0, 4) !== year) return;
+      var m = parseInt(o.created.slice(5, 7), 10) - 1;
+      if (!(m >= 0 && m < 12)) return;
+      var r = rows[m];
+      r.count++;
+      if (o.status === 'done') r.done++;
+      if (o.status !== 'cancelled') { r.sum += A.num(o.price); r.sumCount++; }
+      r.received += A.num(o.paid);
+      r.expenses += A.num(o.expenses);
+    });
+    var total = { name: 'Итого', count: 0, done: 0, sum: 0, sumCount: 0, received: 0, expenses: 0 };
+    rows.forEach(function (r) {
+      ['count', 'done', 'sum', 'sumCount', 'received', 'expenses'].forEach(function (k) { total[k] += r[k]; });
+    });
+    function finish(r) {
+      r.profit = r.received - r.expenses;
+      r.avg = r.sumCount ? Math.round(r.sum / r.sumCount) : 0;
+      return r;
+    }
+    return { rows: rows.map(finish), total: finish(total) };
+  }
+
+  function renderReport() {
+    fillYears();
+    var year = $('yearSelect').value;
+    var data = reportData(year);
+    var nowKey = A.todayStr().slice(0, 7);
+    function tr(r, i, tag) {
+      tag = tag || 'td';
+      var isCurrent = i != null && (year + '-' + (i < 9 ? '0' : '') + (i + 1)) === nowKey;
+      var cls = [];
+      if (i != null && !r.count) cls.push('zero');
+      if (isCurrent) cls.push('current');
+      return '<tr' + (cls.length ? ' class="' + cls.join(' ') + '"' : '') + '>' +
+        '<' + tag + '>' + r.name + '</' + tag + '>' +
+        '<td>' + r.count + '</td><td>' + r.done + '</td>' +
+        '<td>' + A.money(r.sum) + '</td><td>' + A.money(r.received) + '</td><td>' + A.money(r.expenses) + '</td>' +
+        '<td class="profit' + (r.profit < 0 ? ' neg' : '') + '">' + A.money(r.profit) + '</td>' +
+        '<td>' + (r.avg ? A.money(r.avg) : '—') + '</td></tr>';
+    }
+    $('reportTable').innerHTML =
+      '<thead><tr>' + REPORT_COLS.map(function (c) { return '<th scope="col">' + c + '</th>'; }).join('') + '</tr></thead>' +
+      '<tbody>' + data.rows.map(function (r, i) { return tr(r, i); }).join('') + '</tbody>' +
+      '<tfoot>' + tr(data.total) + '</tfoot>';
+  }
+
+  $('yearSelect').addEventListener('change', renderReport);
+
+  $('copyReport').addEventListener('click', function () {
+    var year = $('yearSelect').value;
+    var data = reportData(year);
+    var lines = [REPORT_COLS.join('\t')];
+    data.rows.concat([data.total]).forEach(function (r) {
+      lines.push([r.name === 'Итого' ? 'Итого' : r.name + ' ' + year, r.count, r.done, Math.round(r.sum), Math.round(r.received),
+        Math.round(r.expenses), Math.round(r.profit), r.avg].join('\t'));
+    });
+    copyText(lines.join('\n')).then(function () {
+      A.toast('Таблица скопирована — вставьте её в Excel');
+    }).catch(function () {
+      A.toast('Не удалось скопировать', 'error');
+    });
+  });
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    return new Promise(function (resolve, reject) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      ta.remove();
+      if (ok) resolve(); else reject(new Error('copy'));
+    });
+  }
+
+  /* ===== Старт ===== */
+
+  if (state.password) {
+    showApp();
+    loadAll();
+  } else {
+    showLogin();
+  }
+})();
+</script>
+</body>
+</html>

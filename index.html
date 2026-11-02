@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Доклады и презентации на заказ</title>
+  <meta name="description" content="Доклады, презентации и тексты выступлений на заказ. Цена рассчитывается сразу.">
+  <meta name="theme-color" content="#f7f6fb">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Доклады">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#top">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>
+      </span>
+      Доклады
+    </a>
+    <nav class="topnav" aria-label="Разделы">
+      <a href="#prices">Цены</a>
+      <a href="#order" class="btn btn-sm btn-primary">Заказать</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <!-- Первый экран -->
+  <section class="hero wrap">
+    <span class="eyebrow">Принимаю заказы</span>
+    <h1 id="heroTitle">Доклады и презентации на заказ</h1>
+    <p class="lead" id="heroSubtitle"></p>
+    <div class="hero-actions">
+      <a href="#order" class="btn btn-primary btn-lg">Рассчитать и заказать</a>
+      <a href="#prices" class="btn btn-ghost btn-lg">Цены</a>
+    </div>
+    <ol class="steps">
+      <li class="step card">
+        <span class="step-num">1</span>
+        <div><b>Заполните заявку</b><span class="sub">Цена посчитается сразу</span></div>
+      </li>
+      <li class="step card">
+        <span class="step-num">2</span>
+        <div><b>Я свяжусь с вами</b><span class="sub">Обсудим детали и предоплату</span></div>
+      </li>
+      <li class="step card">
+        <span class="step-num">3</span>
+        <div><b>Получите работу</b><span class="sub">Точно к нужной дате</span></div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- Цены -->
+  <section id="prices" class="section wrap">
+    <div class="section-head">
+      <h2>Цены</h2>
+      <p>Стоимость зависит от объёма. Выберите услугу — она подставится в заявку.</p>
+    </div>
+    <div class="services" id="servicesGrid"></div>
+    <div class="extras">
+      <div class="card extra-card" id="optionsCard">
+        <h3>Дополнительные опции</h3>
+        <ul class="extra-list" id="optionsList"></ul>
+      </div>
+      <div class="card extra-card">
+        <h3>Срочность и оплата</h3>
+        <p id="urgencyText"></p>
+        <p id="prepayText"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Заявка -->
+  <section id="order" class="section wrap">
+    <div class="section-head">
+      <h2>Заявка</h2>
+      <p>Заполните форму — цена пересчитывается сразу. Поля со звёздочкой обязательные.</p>
+    </div>
+
+    <div class="order-grid">
+      <form id="orderForm" class="card form" novalidate autocomplete="on">
+        <div class="form-group-title">Контакты</div>
+        <div class="row-2">
+          <div class="field">
+            <label for="f-name">Ваше имя <span class="req">*</span></label>
+            <input id="f-name" name="name" required maxlength="100" autocomplete="name" placeholder="Например, Анна">
+            <div class="err">Укажите имя</div>
+          </div>
+          <div class="field">
+            <label for="f-contact">Telegram или телефон <span class="req">*</span></label>
+            <input id="f-contact" name="contact" required maxlength="100" autocomplete="tel" inputmode="text" placeholder="@username или +7 900 000-00-00">
+            <div class="err">Укажите, как с вами связаться</div>
+          </div>
+        </div>
+
+        <div class="form-group-title">Работа</div>
+        <div class="field">
+          <label for="f-service">Услуга <span class="req">*</span></label>
+          <select id="f-service" name="serviceId" required></select>
+          <div class="err">Выберите услугу</div>
+        </div>
+        <div class="field">
+          <label for="f-topic">Тема <span class="req">*</span></label>
+          <input id="f-topic" name="topic" required maxlength="300" placeholder="Например, «Возобновляемые источники энергии»">
+          <div class="err">Укажите тему</div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="f-volume" id="volumeLabel">Объём <span class="req">*</span></label>
+            <input id="f-volume" name="volume" type="number" inputmode="numeric" min="1" max="1000" step="1" required placeholder="10">
+            <div class="err">Укажите объём от 1 до 1000</div>
+          </div>
+          <div class="field">
+            <label for="f-deadline">Нужно к <span class="req">*</span></label>
+            <input id="f-deadline" name="deadline" type="date" required>
+            <div class="err">Выберите дату не раньше сегодняшней</div>
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="f-subject">Предмет</label>
+            <input id="f-subject" name="subject" maxlength="100" placeholder="Например, биология">
+          </div>
+          <div class="field">
+            <label for="f-grade">Класс / курс</label>
+            <input id="f-grade" name="grade" maxlength="50" placeholder="Например, 9 класс">
+          </div>
+        </div>
+
+        <div id="optionsBlock">
+          <div class="form-group-title" style="margin-bottom:10px">Дополнительно</div>
+          <div class="options-list" id="optionsChecks"></div>
+        </div>
+
+        <div class="field">
+          <label for="f-wishes">Пожелания</label>
+          <textarea id="f-wishes" name="wishes" maxlength="2000" placeholder="Требования преподавателя, стиль оформления, на что сделать упор…"></textarea>
+        </div>
+
+        <!-- Ловушка для ботов: люди это поле не видят -->
+        <div class="hp-field" aria-hidden="true">
+          <label for="f-website">Не заполняйте это поле</label>
+          <input id="f-website" name="website" tabindex="-1" autocomplete="off">
+        </div>
+      </form>
+
+      <aside class="summary card" aria-live="polite">
+        <h3>Предварительная цена</h3>
+        <div id="summaryBody"></div>
+        <div class="form-error" id="formError" hidden></div>
+        <button type="submit" form="orderForm" class="btn btn-primary btn-lg btn-block" id="submitBtn">Отправить заявку</button>
+        <div class="summary-contact" id="summaryContact"></div>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer wrap">
+  <div id="footerContact"></div>
+  <div style="margin-top:4px">© <span id="year"></span> · Доклады и презентации на заказ</div>
+</footer>
+
+<!-- Окно «Заявка отправлена» -->
+<div class="modal" id="doneModal" hidden role="dialog" aria-modal="true" aria-labelledby="doneTitle">
+  <div class="modal-box card">
+    <div class="modal-ico" aria-hidden="true">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+    </div>
+    <h2 id="doneTitle">Заявка отправлена</h2>
+    <p>Я скоро свяжусь с вами, чтобы обсудить детали.</p>
+    <div class="modal-facts">
+      <div class="modal-fact"><span>Номер заявки</span><b id="doneId">—</b></div>
+      <div class="modal-fact"><span>Сумма</span><b id="doneTotal">—</b></div>
+    </div>
+    <p id="donePrepay" style="margin:-8px 0 18px;font-size:14px"></p>
+    <button type="button" class="btn btn-primary btn-block btn-lg" id="doneClose">Хорошо</button>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(function () {
+  'use strict';
+  var A = window.App;
+  var $ = function (id) { return document.getElementById(id); };
+  var config = A.normalizeConfig(A.DEFAULT_CONFIG);
+  var CLIENT_KEY = 'zk_client';
+
+  var form = $('orderForm');
+  var f = {
+    name: $('f-name'), contact: $('f-contact'), service: $('f-service'), topic: $('f-topic'),
+    volume: $('f-volume'), deadline: $('f-deadline'), subject: $('f-subject'), grade: $('f-grade'),
+    wishes: $('f-wishes'), website: $('f-website')
+  };
+
+  A.mountDemoBanner();
+  $('year').textContent = new Date().getFullYear();
+  f.deadline.min = A.todayStr();
+
+  // Имя и контакт из прошлого раза
+  var saved = A.lsGet(CLIENT_KEY, null);
+  if (saved) {
+    f.name.value = saved.name || '';
+    f.contact.value = saved.contact || '';
+  }
+
+  function perUnit(unit) { return A.unitText(unit, 1); }
+
+  function contactLinkHtml(contact) {
+    var href = A.contactHref(contact);
+    var text = A.esc(contact);
+    return href ? '<a href="' + A.esc(href) + '" target="_blank" rel="noopener">' + text + '</a>' : '<b>' + text + '</b>';
+  }
+
+  function renderTexts() {
+    $('heroTitle').textContent = config.heroTitle;
+    $('heroSubtitle').textContent = config.heroSubtitle;
+    $('heroSubtitle').hidden = !config.heroSubtitle;
+    if (config.contact) {
+      $('footerContact').innerHTML = 'Связаться со мной: ' + contactLinkHtml(config.contact);
+      $('summaryContact').innerHTML = 'Есть вопросы? Пишите: ' + contactLinkHtml(config.contact);
+    } else {
+      $('footerContact').innerHTML = '';
+      $('summaryContact').innerHTML = '';
+    }
+  }
+
+  function renderPrices() {
+    $('servicesGrid').innerHTML = config.services.map(function (s) {
+      return '<article class="service card">' +
+        '<h3>' + A.esc(s.name) + '</h3>' +
+        '<div class="service-price"><span class="amount">' + A.money(s.price) + '</span><span class="per">/ ' + A.esc(perUnit(s.unit)) + '</span></div>' +
+        (s.min ? '<span class="service-min">от ' + A.money(s.min) + '</span>' : '') +
+        (s.desc ? '<p>' + A.esc(s.desc) + '</p>' : '<p></p>') +
+        '<button type="button" class="btn btn-soft btn-block" data-pick="' + A.esc(s.id) + '">Выбрать</button>' +
+        '</article>';
+    }).join('');
+
+    $('optionsCard').hidden = !config.options.length;
+    $('optionsList').innerHTML = config.options.map(function (o) {
+      return '<li><span>' + A.esc(o.name) + '</span><b>+' + A.money(o.price) + '</b></li>';
+    }).join('');
+
+    var u = config.urgency;
+    $('urgencyText').innerHTML = u.percent > 0 && u.days > 0
+      ? '<span class="ico">⚡</span>Срочно: если до срока меньше ' + u.days + ' ' + A.plural(u.days, ['дня', 'дней', 'дней']) + ' — <b>+' + u.percent + '%</b> к стоимости работы.'
+      : '<span class="ico">⚡</span>Срочные заказы — без наценки.';
+    $('prepayText').innerHTML = config.prepay > 0
+      ? '<span class="ico">💳</span>Предоплата — <b>' + config.prepay + '%</b>, остальное — после получения работы.'
+      : '<span class="ico">💳</span>Оплата после получения работы.';
+  }
+
+  function renderFormChoices() {
+    var current = f.service.value;
+    f.service.innerHTML = '<option value="" disabled' + (current ? '' : ' selected') + '>Выберите услугу</option>' +
+      config.services.map(function (s) {
+        return '<option value="' + A.esc(s.id) + '">' + A.esc(s.name) + ' — ' + A.money(s.price) + '/' + A.esc(perUnit(s.unit)) + '</option>';
+      }).join('');
+    if (current && config.services.some(function (s) { return s.id === current; })) f.service.value = current;
+
+    var checked = selectedOptions();
+    $('optionsBlock').hidden = !config.options.length;
+    $('optionsChecks').innerHTML = config.options.map(function (o) {
+      return '<label class="check"><input type="checkbox" name="options" value="' + A.esc(o.id) + '"' +
+        (checked.indexOf(o.id) !== -1 ? ' checked' : '') + '>' +
+        '<span class="check-text">' + A.esc(o.name) + '</span><span class="check-price">+' + A.money(o.price) + '</span></label>';
+    }).join('');
+  }
+
+  function selectedOptions() {
+    return Array.prototype.map.call(form.querySelectorAll('input[name="options"]:checked'), function (x) { return x.value; });
+  }
+
+  function readForm() {
+    return {
+      name: f.name.value, contact: f.contact.value, serviceId: f.service.value, topic: f.topic.value,
+      volume: f.volume.value, deadline: f.deadline.value, subject: f.subject.value, grade: f.grade.value,
+      wishes: f.wishes.value, options: selectedOptions(), website: f.website.value
+    };
+  }
+
+  function updateSummary() {
+    var input = readForm();
+    var service = config.services.filter(function (s) { return s.id === input.serviceId; })[0];
+    $('volumeLabel').innerHTML = 'Объём' + (service ? ', ' + A.esc(A.UNIT_LABELS[service.unit] || service.unit) : '') + ' <span class="req">*</span>';
+
+    var c = A.calcPrice(config, input);
+    if (!c.ok) {
+      $('summaryBody').innerHTML =
+        '<div class="summary-total">— <small>₽</small></div>' +
+        '<p class="summary-empty">' + (service ? 'Укажите объём — цена посчитается автоматически.' : 'Выберите услугу и укажите объём — цена посчитается автоматически.') + '</p>' +
+        (config.note ? '<p class="summary-note">' + A.esc(config.note) + '</p>' : '');
+      return;
+    }
+    var lines = [];
+    var vol = c.volume + ' ' + A.unitText(c.service.unit, c.volume);
+    if (c.minApplied) {
+      lines.push('<li><span>' + A.esc(c.service.name) + ', ' + A.esc(vol) + ' (минимальная стоимость)</span><span>' + A.money(c.base) + '</span></li>');
+    } else {
+      lines.push('<li><span>' + A.esc(c.service.name) + ': ' + A.esc(vol) + ' × ' + A.money(c.service.price) + '</span><span>' + A.money(c.base) + '</span></li>');
+    }
+    c.options.forEach(function (o) {
+      lines.push('<li><span>' + A.esc(o.name) + '</span><span>+' + A.money(o.price) + '</span></li>');
+    });
+    if (c.urgent) {
+      var when = c.daysLeft === 0 ? 'сегодня' : 'через ' + c.daysLeft + ' ' + A.plural(c.daysLeft, ['день', 'дня', 'дней']);
+      lines.push('<li class="urgent"><span>Срочность (' + when + '), +' + config.urgency.percent + '%</span><span>+' + A.money(c.urgencySum) + '</span></li>');
+    }
+    $('summaryBody').innerHTML =
+      '<div class="summary-total">' + A.money(c.total) + '</div>' +
+      '<ul class="summary-lines">' + lines.join('') + '</ul>' +
+      (config.prepay > 0 ? '<div class="summary-prepay"><span>Предоплата ' + config.prepay + '%</span><b>' + A.money(c.prepay) + '</b></div>' : '') +
+      (config.note ? '<p class="summary-note">' + A.esc(config.note) + '</p>' : '');
+  }
+
+  function renderAll() {
+    renderTexts();
+    renderPrices();
+    renderFormChoices();
+    updateSummary();
+  }
+
+  A.loadConfig(function (cfg) {
+    config = cfg;
+    renderAll();
+  });
+
+  // «Выбрать» в карточке услуги
+  $('servicesGrid').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-pick]');
+    if (!btn) return;
+    f.service.value = btn.getAttribute('data-pick');
+    f.service.closest('.field').classList.remove('invalid');
+    updateSummary();
+    document.getElementById('order').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(function () { (f.name.value ? f.topic : f.name).focus({ preventScroll: true }); }, 450);
+  });
+
+  form.addEventListener('input', function (e) {
+    var field = e.target.closest('.field');
+    if (field) field.classList.remove('invalid');
+    $('formError').hidden = true;
+    updateSummary();
+  });
+  form.addEventListener('change', updateSummary);
+
+  function validate() {
+    var bad = [];
+    function check(el, ok) {
+      var field = el.closest('.field');
+      field.classList.toggle('invalid', !ok);
+      if (!ok) bad.push(el);
+    }
+    var vol = Number(f.volume.value);
+    var dl = A.daysUntil(f.deadline.value);
+    check(f.name, f.name.value.trim().length > 0);
+    check(f.contact, f.contact.value.trim().length >= 3);
+    check(f.service, !!f.service.value);
+    check(f.topic, f.topic.value.trim().length > 0);
+    check(f.volume, Number.isInteger(vol) && vol >= 1 && vol <= 1000);
+    check(f.deadline, dl !== null && dl >= 0 && dl <= 730);
+    if (bad.length) {
+      bad[0].focus();
+      bad[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return !bad.length;
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    $('formError').hidden = true;
+    if (!validate()) return;
+
+    var input = readForm();
+    var calc = A.calcPrice(config, input);
+    var btn = $('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Отправляем…';
+
+    A.api('order', { order: input }).then(function (res) {
+      A.lsSet(CLIENT_KEY, { name: input.name.trim(), contact: input.contact.trim() });
+      var total = res.total != null ? res.total : calc.total;
+      var prepay = res.prepay != null ? res.prepay : calc.prepay;
+      $('doneId').textContent = '№' + (res.id || '—');
+      $('doneTotal').textContent = A.money(total);
+      $('donePrepay').textContent = config.prepay > 0 ? 'Предоплата ' + config.prepay + '%: ' + A.money(prepay) : '';
+      $('doneModal').hidden = false;
+      $('doneClose').focus();
+
+      // Очищаем поля заказа, имя и контакт оставляем
+      [f.topic, f.volume, f.deadline, f.subject, f.grade, f.wishes].forEach(function (el) { el.value = ''; });
+      f.service.selectedIndex = 0;
+      form.querySelectorAll('input[name="options"]').forEach(function (x) { x.checked = false; });
+      updateSummary();
+    }).catch(function (err) {
+      $('formError').textContent = err.message || 'Не удалось отправить заявку';
+      $('formError').hidden = false;
+    }).then(function () {
+      btn.disabled = false;
+      btn.textContent = 'Отправить заявку';
+    });
+  });
+
+  function closeModal() { $('doneModal').hidden = true; }
+  $('doneClose').addEventListener('click', closeModal);
+  $('doneModal').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+
+  A.showIosInstallHint('zk_ios_hint_client', 'Доклады');
+})();
+</script>
+</body>
+</html>
