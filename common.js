@@ -26,7 +26,7 @@
     pricesText: 'Цены ориентировочные — за весь проект целиком. Выберите услугу — она подставится в заявку.',
     contact: SUPPORT,
     support: SUPPORT,
-    note: 'Цена ориентировочная — точную сумму подтвержу, когда обсудим детали. Работу начинаю после предоплаты.',
+    note: 'Цена ориентировочная — точную сумму подтвержу, когда обсудим детали.',
     footerText: 'Доклады и презентации на заказ',
     services: [
       { id: 'report', name: 'Доклад', price: 1000,
@@ -43,7 +43,7 @@
       { id: 'notes', name: 'Заметки докладчика', price: 300 }
     ],
     urgency: { days: 3, percent: 30 },
-    prepay: 50
+    prepay: 0
   };
 
   var STATUSES = [
@@ -203,7 +203,9 @@
         days: Math.round(clampNum(u.days, 0, 60, d.urgency.days)),
         percent: Math.round(clampNum(u.percent, 0, 500, d.urgency.percent))
       },
-      prepay: Math.round(clampNum(raw.prepay, 0, 100, d.prepay))
+      prepay: Math.round(clampNum(raw.prepay, 0, 100, d.prepay)),
+      // Включена ли онлайн-оплата — решает сервер (есть ли ключи ЮKassa), из админки не меняется.
+      payEnabled: raw.payEnabled === true
     };
   }
 
@@ -270,7 +272,7 @@
   }
 
   var ORDER_FIELDS = ['id', 'created', 'name', 'contact', 'service', 'volume', 'topic', 'subject', 'grade',
-    'deadline', 'options', 'wishes', 'calcPrice', 'status', 'price', 'paid', 'expenses', 'notes'];
+    'deadline', 'options', 'wishes', 'calcPrice', 'status', 'price', 'paid', 'expenses', 'notes', 'payToken', 'payLog'];
 
   function statusLabel(id) {
     for (var i = 0; i < STATUSES.length; i++) if (STATUSES[i].id === id) return STATUSES[i].label;
@@ -291,8 +293,16 @@
       deadline: clean.deadline,
       options: calc.options.map(function (o) { return o.name; }).join(', '),
       wishes: clean.wishes, calcPrice: String(calc.total),
-      status: 'new', price: String(calc.total), paid: '', expenses: '', notes: ''
+      status: 'new', price: String(calc.total), paid: '', expenses: '', notes: '',
+      payToken: '', payLog: ''
     };
+  }
+
+  /** Сколько осталось оплатить онлайн: вся цена заказа минус уже оплаченное. */
+  function payAmounts(order) {
+    var price = Math.round(num(order.price || order.calcPrice));
+    var paid = Math.round(num(order.paid));
+    return { price: price, paid: paid, rest: Math.max(0, price - paid) };
   }
 
   function ApiError(message, code) {
@@ -331,6 +341,7 @@
     calcPrice: calcPrice,
     validateOrder: validateOrder,
     buildOrderRow: buildOrderRow,
+    payAmounts: payAmounts,
     applyUpdate: applyUpdate,
     ApiError: ApiError,
     statusLabel: statusLabel,

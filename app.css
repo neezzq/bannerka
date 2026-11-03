@@ -816,3 +816,23 @@ img { max-width: 100%; display: block; }
 .steps-edit { display: grid; gap: 8px; }
 .step-edit { display: grid; grid-template-columns: 40px 1fr; gap: 6px 10px; align-items: center; }
 .step-edit .step-num { width: 36px; height: 36px; font-size: 15px; grid-row: span 2; }
+
+/* Страница оплаты */
+.pay-main { max-width: 520px; padding-top: 28px; padding-bottom: calc(40px + var(--safe-bottom)); }
+.pay-card { padding: 24px; }
+.pay-head h1 { font-size: 26px; margin: 4px 0 6px; }
+.pay-topic { color: var(--muted); margin: 0; }
+.pay-buttons { display: grid; gap: 10px; margin-top: 8px; }
+.pay-buttons .btn { white-space: normal; }
+.pay-done, .pay-wait {
+  padding: 12px 14px; border-radius: var(--radius-sm); margin-bottom: 14px; font-weight: 600;
+  background: #e8f7ee; color: #17723d;
+}
+.pay-wait { background: #fff6e0; color: #8a5a00; }
+.pay-state { text-align: center; padding: 8px 0; }
+.pay-state h1 { font-size: 24px; margin: 12px 0 6px; }
+.pay-state p { color: var(--muted); margin: 0 0 20px; }
+.pay-state:not(.ok) .modal-ico { background: #fdecec; color: var(--red); }
+.pay-secure { display: flex; align-items: center; justify-content: center; gap: 6px; text-align: center; color: var(--muted); font-size: 13px; margin: 14px 0 0; }
+.pay-secure a { font-weight: 700; text-decoration: none; }
+.done-pay { display: grid; gap: 8px; margin-bottom: 10px; }

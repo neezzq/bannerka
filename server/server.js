@@ -19,6 +19,13 @@ const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || '');
 const TG_TOKEN = String(process.env.TG_TOKEN || '').trim();
 const TG_CHAT_IDS = String(process.env.TG_CHAT_ID || '').split(/[\s,;]+/).filter(Boolean);
 const SITE_URL = String(process.env.SITE_URL || '').replace(/\/+$/, '');
+const YK_SHOP_ID = String(process.env.YK_SHOP_ID || '').trim();
+const YK_SECRET_KEY = String(process.env.YK_SECRET_KEY || '').trim();
+const YK_ENABLED = !!(YK_SHOP_ID && YK_SECRET_KEY);
+const YK_RECEIPT = /^(1|true|yes|да)$/i.test(String(process.env.YK_RECEIPT || ''));
+const YK_VAT_CODE = parseInt(process.env.YK_VAT_CODE || '1', 10) || 1;
+const YK_TAX_SYSTEM = parseInt(process.env.YK_TAX_SYSTEM || '0', 10) || 0;
+const YK_API = String(process.env.YK_API_URL || 'https://api.yookassa.ru/v3').replace(/\/+$/, '');
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
@@ -47,12 +54,16 @@ const db = {
   bot: readJson('bot.json', { offset: 0, subscribers: [] })
 };
 if (!Array.isArray(db.orders)) db.orders = [];
+const newToken = () => crypto.randomBytes(12).toString('base64url');
+let tokensAdded = false;
+for (const o of db.orders) if (!o.payToken) { o.payToken = newToken(); tokensAdded = true; }
 db.meta.lastId = Math.max(db.meta.lastId || 0, ...db.orders.map((o) => +o.id || 0), 0);
 
 const saveOrders = () => writeJson('orders.json', db.orders);
 const saveConfig = () => writeJson('config.json', db.config);
 const saveMeta = () => writeJson('meta.json', db.meta);
 const saveBot = () => writeJson('bot.json', db.bot);
+if (tokensAdded) saveOrders();
 
 /* ================= Пароль и защита от перебора ================= */
 
@@ -103,11 +114,25 @@ function normContact(c) {
   return String(c).toLowerCase().replace(/^https?:\/\/(t\.me|telegram\.me)\//, '@').replace(/[^\w@+]/g, '');
 }
 
-async function handleApi(p, ip) {
+async function handleApi(p, ctx) {
+  const ip = ctx.ip;
   const action = String(p.action || '');
   switch (action) {
     case 'config':
-      return { ok: true, config: db.config };
+      return { ok: true, config: Object.assign({}, db.config, { payEnabled: YK_ENABLED }) };
+
+    case 'payInfo':
+      return { ok: true, info: payInfo(findPayOrder(p)) };
+
+    case 'pay':
+      if (rateLimited('pay:' + ip, 20, 3600e3)) throw C.ApiError('Слишком много попыток оплаты. Попробуйте позже.', 'rate');
+      return { ok: true, url: await createPayment(findPayOrder(p), p, ctx) };
+
+    case 'payCheck': {
+      const order = findPayOrder(p);
+      await checkOrderPayments(order);
+      return { ok: true, info: payInfo(order) };
+    }
 
     case 'order': {
       const o = p.order || {};
@@ -119,11 +144,12 @@ async function handleApi(p, ip) {
       }
       db.meta.lastId += 1;
       const row = C.buildOrderRow(db.meta.lastId, C.nowStamp(), v.clean, v.calc);
+      row.payToken = newToken();
       db.orders.push(row);
       saveMeta();
       saveOrders();
       notifyNewOrder(row, v.calc).catch((e) => console.error('Telegram:', e.message));
-      return { ok: true, id: row.id, total: v.calc.total, prepay: v.calc.prepay };
+      return { ok: true, id: row.id, total: v.calc.total, prepay: v.calc.prepay, payToken: YK_ENABLED ? row.payToken : '' };
     }
 
     case 'login':
@@ -132,7 +158,7 @@ async function handleApi(p, ip) {
 
     case 'list':
       await checkAuth(ip, p.password);
-      return { ok: true, orders: db.orders };
+      return { ok: true, orders: db.orders.map((o) => Object.assign({}, o, { payments: undefined })) };
 
     case 'update': {
       await checkAuth(ip, p.password);
@@ -154,12 +180,141 @@ async function handleApi(p, ip) {
       await checkAuth(ip, p.password);
       db.config = C.normalizeConfig(p.config);
       saveConfig();
-      return { ok: true, config: db.config };
+      return { ok: true, config: Object.assign({}, db.config, { payEnabled: YK_ENABLED }) };
 
     default:
       throw C.ApiError('Неизвестное действие');
   }
 }
+
+/* ================= ЮKassa ================= */
+
+function baseUrl(req) {
+  if (SITE_URL) return SITE_URL;
+  const proto = String(req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim();
+  return proto + '://' + String(req.headers['x-forwarded-host'] || req.headers.host || 'localhost');
+}
+
+function payLink(o, base) {
+  return (base || SITE_URL) + '/pay.html?o=' + encodeURIComponent(o.id) + '&t=' + encodeURIComponent(o.payToken);
+}
+
+function findPayOrder(p) {
+  const o = db.orders.find((x) => x.id === String(p.o || ''));
+  const t = String(p.t || '');
+  if (!o || !o.payToken || t.length !== o.payToken.length ||
+      !crypto.timingSafeEqual(Buffer.from(t), Buffer.from(o.payToken))) {
+    throw C.ApiError('Ссылка на оплату неверная или устарела. Напишите мне: ' + (db.config.support || C.SUPPORT), 'notfound');
+  }
+  return o;
+}
+
+function payInfo(o) {
+  const a = C.payAmounts(o);
+  const pending = (o.payments || []).some((x) => x.status === 'pending');
+  return {
+    id: o.id, service: o.service, topic: o.topic, deadline: o.deadline, status: o.status,
+    price: a.price, paid: a.paid, rest: a.rest,
+    enabled: YK_ENABLED && o.status !== 'cancelled', receipt: YK_RECEIPT, pending
+  };
+}
+
+function yk(method, pathname, body) {
+  const headers = {
+    Authorization: 'Basic ' + Buffer.from(YK_SHOP_ID + ':' + YK_SECRET_KEY).toString('base64'),
+    'Content-Type': 'application/json'
+  };
+  if (method === 'POST') headers['Idempotence-Key'] = crypto.randomUUID();
+  return fetch(YK_API + pathname, {
+    method, headers, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(20e3)
+  }).then(async (r) => {
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      console.error('ЮKassa', method, pathname, r.status, JSON.stringify(j));
+      throw C.ApiError('Платёжная система ответила ошибкой' + (j.description ? ': ' + j.description : '') + '. Попробуйте позже.', 'pay');
+    }
+    return j;
+  });
+}
+
+async function createPayment(o, p, ctx) {
+  if (!YK_ENABLED) throw C.ApiError('Онлайн-оплата пока не подключена', 'pay');
+  if (o.status === 'cancelled') throw C.ApiError('Заказ отменён', 'pay');
+  const a = C.payAmounts(o);
+  const kind = 'full';
+  const amount = a.rest; // всегда полная оплата (за вычетом уже оплаченного)
+  if (amount < 1) throw C.ApiError('Заказ уже оплачен полностью', 'pay');
+
+  const value = amount.toFixed(2);
+  const title = ('Оплата заказа №' + o.id + ': ' + o.service).slice(0, 128);
+  const body = {
+    amount: { value, currency: 'RUB' },
+    capture: true,
+    confirmation: { type: 'redirect', return_url: payLink(o, ctx.base) + '&back=1' },
+    description: title,
+    metadata: { orderId: o.id, kind }
+  };
+  if (YK_RECEIPT) {
+    const email = C.str(p.email, 100);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw C.ApiError('Укажите email — на него придёт чек', 'validation');
+    body.receipt = {
+      customer: { email },
+      items: [{
+        description: title, quantity: '1.00', amount: { value, currency: 'RUB' },
+        vat_code: YK_VAT_CODE, payment_subject: 'service',
+        payment_mode: o.status === 'done' ? 'full_payment' : 'full_prepayment'
+      }]
+    };
+    if (YK_TAX_SYSTEM) body.receipt.tax_system_code = YK_TAX_SYSTEM;
+  }
+  const pay = await yk('POST', '/payments', body);
+  o.payments = (o.payments || []).concat({ id: pay.id, amount, kind, status: pay.status, at: C.nowStamp() });
+  saveOrders();
+  const url = pay.confirmation && pay.confirmation.confirmation_url;
+  if (!url) throw C.ApiError('Не удалось получить ссылку на оплату', 'pay');
+  return url;
+}
+
+/** Берёт платёж из ЮKassa (а не из уведомления — его можно подделать) и отмечает оплату в заказе. */
+async function syncPayment(paymentId) {
+  const pay = await yk('GET', '/payments/' + encodeURIComponent(paymentId));
+  const orderId = pay.metadata && pay.metadata.orderId;
+  const o = db.orders.find((x) => x.id === String(orderId));
+  if (!o) return;
+  o.payments = o.payments || [];
+  let rec = o.payments.find((x) => x.id === pay.id);
+  if (!rec) { rec = { id: pay.id, amount: Math.round(C.num(pay.amount.value)), kind: pay.metadata.kind, at: C.nowStamp() }; o.payments.push(rec); }
+  rec.status = pay.status;
+  if (pay.status === 'succeeded' && pay.paid && !rec.counted) {
+    rec.counted = true;
+    const amount = Math.round(C.num(pay.amount.value));
+    o.paid = String(Math.round(C.num(o.paid)) + amount);
+    if (o.status === 'new') o.status = 'work';
+    o.payLog = (o.payLog ? o.payLog + '\n' : '') + C.nowStamp() + ' — ' + C.money(amount) + ' (ЮKassa)';
+    saveOrders();
+    notifyPayment(o, amount).catch((e) => console.error('Telegram:', e.message));
+  } else {
+    saveOrders();
+  }
+}
+
+async function checkOrderPayments(o) {
+  if (!YK_ENABLED) return;
+  for (const p of (o.payments || []).filter((x) => x.status === 'pending' || x.status === 'waiting_for_capture')) {
+    await syncPayment(p.id).catch((e) => console.error('ЮKassa check:', e.message));
+  }
+}
+
+// Раз в 5 минут добираем платежи, по которым не пришло уведомление.
+setInterval(() => {
+  if (!YK_ENABLED) return;
+  const hourAgo = Date.now() - 2 * 3600e3;
+  for (const o of db.orders) {
+    if ((o.payments || []).some((x) => x.status === 'pending' && new Date(String(x.at).replace(' ', 'T')).getTime() > hourAgo)) {
+      checkOrderPayments(o);
+    }
+  }
+}, 300e3).unref();
 
 /* ================= Telegram ================= */
 
@@ -205,6 +360,9 @@ function orderText(o, title) {
   if (o.wishes) lines.push('💬 ' + h(o.wishes));
   lines.push('💰 ' + h(C.money(o.price || o.calcPrice)) + (o.paid ? ' · оплачено ' + h(C.money(o.paid)) : ''));
   if (o.notes) lines.push('🗒 ' + h(o.notes));
+  if (YK_ENABLED && SITE_URL && o.payToken && o.status !== 'cancelled' && C.payAmounts(o).rest > 0) {
+    lines.push('', '💳 Ссылка на оплату для клиента:', h(payLink(o)));
+  }
   return lines.join('\n');
 }
 
@@ -226,6 +384,18 @@ async function notifyNewOrder(o) {
       chat_id, text: orderText(o, '🆕 Новая заявка'), parse_mode: 'HTML',
       disable_web_page_preview: true, reply_markup: orderButtons(o)
     }).catch((e) => console.error('Telegram →', chat_id, e.message));
+  }
+}
+
+async function notifyPayment(o, amount) {
+  if (!TG_TOKEN) return;
+  const a = C.payAmounts(o);
+  const text = '💳 <b>Оплата ' + h(C.money(amount)) + '</b> по заказу №' + h(o.id) + '\n' +
+    h(o.name) + ' — ' + contactLine(o.contact) + '\n' + h(o.service) + ': ' + h(o.topic) + '\n' +
+    (a.rest > 0 ? 'Осталось оплатить: ' + h(C.money(a.rest)) : 'Заказ оплачен полностью ✅');
+  for (const chat_id of notifyChats()) {
+    await tg('sendMessage', { chat_id, text, parse_mode: 'HTML', disable_web_page_preview: true })
+      .catch((e) => console.error('Telegram →', chat_id, e.message));
   }
 }
 
@@ -325,7 +495,7 @@ async function pollTelegram() {
 const STATIC = {
   '/index.html': 'index.html', '/admin.html': 'admin.html', '/app.css': 'app.css',
   '/common.js': 'common.js', '/config.js': 'config.js', '/sw.js': 'sw.js',
-  '/manifest.json': 'manifest.json', '/admin-manifest.json': 'admin-manifest.json'
+  '/manifest.json': 'manifest.json', '/admin-manifest.json': 'admin-manifest.json', '/pay.html': 'pay.html'
 };
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -355,6 +525,7 @@ function sendJson(res, status, obj) {
 function serveStatic(req, res, pathname) {
   if (pathname === '/' || pathname === '') pathname = '/index.html';
   if (pathname === '/admin' || pathname === '/admin/') pathname = '/admin.html';
+  if (pathname === '/pay' || pathname === '/pay/') pathname = '/pay.html';
   let rel = STATIC[pathname];
   if (!rel && /^\/icons\/[\w.-]+\.png$/.test(pathname)) rel = pathname.slice(1);
   if (!rel && pathname === '/favicon.ico') rel = 'icons/icon-192.png';
@@ -380,6 +551,20 @@ const server = http.createServer((req, res) => {
   let pathname;
   try { pathname = decodeURIComponent(new URL(req.url, 'http://x').pathname); } catch (e) { return send(res, 400, 'Bad request'); }
 
+  if (pathname === '/api/yookassa' && req.method === 'POST') {
+    const chunks = [];
+    req.on('data', (c) => { if (chunks.length < 64) chunks.push(c); });
+    req.on('end', async () => {
+      send(res, 200, 'ok', { 'Content-Type': 'text/plain' }); // ЮKassa ждёт быстрый 200
+      try {
+        const n = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+        const id = n && n.object && n.object.id;
+        if (YK_ENABLED && id && /^[\w-]{10,60}$/.test(id)) await syncPayment(id);
+      } catch (e) { console.error('ЮKassa webhook:', e.message); }
+    });
+    return;
+  }
+
   if (pathname === '/api' || pathname === '/api/') {
     if (req.method === 'GET') return sendJson(res, 200, { ok: true, message: 'API работает' });
     if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'Метод не поддерживается' });
@@ -397,7 +582,7 @@ const server = http.createServer((req, res) => {
         return sendJson(res, 400, { ok: false, error: 'Неверный формат запроса' });
       }
       try {
-        sendJson(res, 200, await handleApi(payload || {}, clientIp(req)));
+        sendJson(res, 200, await handleApi(payload || {}, { ip: clientIp(req), base: baseUrl(req) }));
       } catch (e) {
         if (!e.code) console.error('API', payload && payload.action, e);
         const status = e.code === 'auth' ? 401 : e.code === 'rate' ? 429 : 400;
@@ -414,6 +599,7 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, HOST, () => {
   console.log('Сайт запущен: http://' + HOST + ':' + PORT + ' · данные: ' + DATA_DIR);
   if (!ADMIN_PASSWORD) console.warn('ВНИМАНИЕ: ADMIN_PASSWORD не задан — вход в админку невозможен');
+  console.log('ЮKassa: ' + (YK_ENABLED ? 'подключена (магазин ' + YK_SHOP_ID + (YK_RECEIPT ? ', с чеками' : '') + ')' : 'не настроена — онлайн-оплата выключена'));
   pollTelegram();
 });
 

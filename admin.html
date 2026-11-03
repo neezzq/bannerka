@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="app.css?v=3">
+  <link rel="stylesheet" href="app.css?v=4">
 </head>
 <body class="admin">
 
@@ -197,8 +197,8 @@
   </nav>
 </div>
 
-<script src="config.js?v=3"></script>
-<script src="common.js?v=3"></script>
+<script src="config.js?v=4"></script>
+<script src="common.js?v=4"></script>
 <script>
 (function () {
   'use strict';
@@ -316,7 +316,9 @@
       }),
       A.api('config').then(function (res) {
         if (!state.pricesDirty) {
+          var hadPay = state.config && state.config.payEnabled;
           state.config = A.normalizeConfig(res.config);
+          if (state.orders.length && hadPay !== state.config.payEnabled) renderOrders();
           renderPricesEditor();
         }
       })
@@ -486,7 +488,7 @@
     var id = A.esc(o.id);
     var details = [
       ['Предмет', o.subject], ['Класс / курс', o.grade], ['Опции', o.options],
-      ['Пожелания', o.wishes], ['Цена сайта', o.calcPrice ? A.money(o.calcPrice) : ''], ['Создано', o.created]
+      ['Пожелания', o.wishes], ['Цена сайта', o.calcPrice ? A.money(o.calcPrice) : ''], ['Оплаты онлайн', o.payLog], ['Создано', o.created]
     ].filter(function (r) { return r[1]; }).map(function (r) {
       return '<dt>' + r[0] + '</dt><dd>' + A.esc(r[1]) + '</dd>';
     }).join('');
@@ -513,6 +515,8 @@
       (details ? '<details><summary>Подробнее</summary><dl class="details-grid">' + details + '</dl></details>' : '') +
       '<div class="order-actions">' +
         '<button type="button" class="btn btn-primary btn-sm save-btn">Сохранить</button>' +
+        (state.config && state.config.payEnabled && o.payToken && o.status !== 'cancelled'
+          ? '<button type="button" class="btn btn-soft btn-sm paylink-btn" title="Скопировать ссылку на оплату для клиента">💳 Ссылка на оплату</button>' : '') +
         '<span class="spacer"></span>' +
         '<button type="button" class="btn btn-danger btn-sm del-btn">Удалить</button>' +
       '</div>' +
@@ -577,6 +581,14 @@
   });
 
   $('ordersList').addEventListener('click', function (e) {
+    var payBtn = e.target.closest('.paylink-btn');
+    if (payBtn) {
+      var po = state.orders.filter(function (x) { return x.id === payBtn.closest('.order').getAttribute('data-id'); })[0];
+      if (!po) return;
+      var link = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'pay.html?o=' + encodeURIComponent(po.id) + '&t=' + encodeURIComponent(po.payToken);
+      copyText(link).then(function () { A.toast('Ссылка скопирована — отправьте её клиенту'); }, function () { prompt('Ссылка на оплату:', link); });
+      return;
+    }
     var save = e.target.closest('.save-btn');
     var del = e.target.closest('.del-btn');
     if (!save && !del) return;

@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="app.css?v=3">
+  <link rel="stylesheet" href="app.css?v=4">
 </head>
 <body>
 
@@ -192,12 +192,16 @@
       <div class="modal-fact"><span>Сумма</span><b id="doneTotal">—</b></div>
     </div>
     <p id="donePrepay" style="margin:-8px 0 18px;font-size:14px"></p>
-    <button type="button" class="btn btn-primary btn-block btn-lg" id="doneClose">Хорошо</button>
+    <div class="done-pay" id="donePay" hidden>
+      <a class="btn btn-primary btn-block btn-lg" id="donePayBtn" href="#">Оплатить онлайн</a>
+      <span class="muted" style="font-size:13px">Карта, СБП, SberPay. Можно и позже — по ссылке, которую я пришлю.</span>
+    </div>
+    <button type="button" class="btn btn-ghost btn-block btn-lg" id="doneClose">Хорошо</button>
   </div>
 </div>
 
-<script src="config.js?v=3"></script>
-<script src="common.js?v=3"></script>
+<script src="config.js?v=4"></script>
+<script src="common.js?v=4"></script>
 <script>
 (function () {
   'use strict';
@@ -283,7 +287,9 @@
       : '<span class="ico">⚡</span>Срочные заказы — без наценки.';
     $('prepayText').innerHTML = config.prepay > 0
       ? '<span class="ico">💳</span>Предоплата — <b>' + config.prepay + '%</b>, остальное — после получения работы.'
-      : '<span class="ico">💳</span>Оплата после получения работы.';
+      : config.payEnabled
+        ? '<span class="ico">💳</span>Оплата — полная стоимость онлайн: карта, СБП, SberPay.'
+        : '<span class="ico">💳</span>Оплата — полная стоимость.';
   }
 
   function renderFormChoices() {
@@ -410,6 +416,13 @@
       $('doneId').textContent = '№' + (res.id || '—');
       $('doneTotal').textContent = '≈ ' + A.money(total);
       $('donePrepay').textContent = config.prepay > 0 ? 'Предоплата ' + config.prepay + '%: ' + A.money(prepay) : '';
+      var canPay = config.payEnabled && res.payToken;
+      $('donePay').hidden = !canPay;
+      if (canPay) {
+        $('donePayBtn').href = 'pay.html?o=' + encodeURIComponent(res.id) + '&t=' + encodeURIComponent(res.payToken);
+        $('donePayBtn').textContent = 'Оплатить ' + A.money(total);
+      }
+      $('doneClose').className = 'btn btn-block btn-lg ' + (canPay ? 'btn-ghost' : 'btn-primary');
       $('doneModal').hidden = false;
       $('doneClose').focus();
 
