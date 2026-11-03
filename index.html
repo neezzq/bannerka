@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="app.css?v=7">
+  <link rel="stylesheet" href="app.css?v=8">
 </head>
 <body>
 
@@ -114,8 +114,9 @@
 
         <div class="form-group-title">Работа</div>
         <div class="field">
-          <label for="f-service">Услуга <span class="req">*</span></label>
-          <select id="f-service" name="serviceId" required></select>
+          <span class="field-label" id="svcLabel">Услуга <span class="req">*</span> <span class="muted" style="font-weight:400">— отметьте одну</span></span>
+          <div class="svc-pick" id="svcPick" role="radiogroup" aria-labelledby="svcLabel"></div>
+          <input type="hidden" id="f-service" name="serviceId">
           <div class="err">Выберите услугу</div>
         </div>
         <div class="field">
@@ -212,8 +213,8 @@
   </div>
 </div>
 
-<script src="config.js?v=7"></script>
-<script src="common.js?v=7"></script>
+<script src="config.js?v=8"></script>
+<script src="common.js?v=8"></script>
 <script>
 (function () {
   'use strict';
@@ -304,11 +305,16 @@
 
   function renderFormChoices() {
     var current = f.service.value;
-    f.service.innerHTML = '<option value="" disabled' + (current ? '' : ' selected') + '>Выберите услугу</option>' +
-      config.services.map(function (s) {
-        return '<option value="' + A.esc(s.id) + '">' + A.esc(s.name) + ' — ≈ ' + A.money(s.price) + '</option>';
-      }).join('');
-    if (current && config.services.some(function (s) { return s.id === current; })) f.service.value = current;
+    if (!config.services.some(function (s) { return s.id === current; })) current = '';
+    $('svcPick').innerHTML = config.services.map(function (s) {
+      return '<label class="svc-opt">' +
+        '<input type="radio" name="svc" value="' + A.esc(s.id) + '"' + (s.id === current ? ' checked' : '') + '>' +
+        '<span class="svc-tick" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>' +
+        '<span class="svc-name">' + A.esc(s.name) + '</span>' +
+        '<span class="svc-price">≈ ' + A.money(s.price) + '</span></label>';
+    }).join('');
+    f.service.value = current;
+    markPicked();
 
     var checked = selectedOptions();
     $('optionsBlock').hidden = !config.options.length;
@@ -319,11 +325,31 @@
     }).join('');
   }
 
+  /** Отмечаем выбранную услугу и в карточках цен. */
+  function markPicked() {
+    var id = f.service.value;
+    document.querySelectorAll('[data-pick]').forEach(function (b) {
+      var on = b.getAttribute('data-pick') === id;
+      b.closest('.service').classList.toggle('picked', on);
+      b.textContent = on ? '✓ Выбрано' : 'Выбрать';
+    });
+  }
+
+  function pickService(id) {
+    var r = form.querySelector('input[name="svc"][value="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+    if (r) r.checked = true;
+    $('svcPick').closest('.field').classList.remove('invalid');
+    updateSummary();
+  }
+
   function selectedOptions() {
     return Array.prototype.map.call(form.querySelectorAll('input[name="options"]:checked'), function (x) { return x.value; });
   }
 
   function readForm() {
+    var r = form.querySelector('input[name="svc"]:checked');
+    f.service.value = r ? r.value : '';
+    markPicked();
     return {
       name: f.name.value, contact: f.contact.value, serviceId: f.service.value, topic: f.topic.value,
       volume: f.volume.value, deadline: f.deadline.value, subject: f.subject.value, grade: f.grade.value,
@@ -377,9 +403,7 @@
   $('servicesGrid').addEventListener('click', function (e) {
     var btn = e.target.closest('[data-pick]');
     if (!btn) return;
-    f.service.value = btn.getAttribute('data-pick');
-    f.service.closest('.field').classList.remove('invalid');
-    updateSummary();
+    pickService(btn.getAttribute('data-pick'));
     document.getElementById('order').scrollIntoView({ behavior: 'smooth', block: 'start' });
     setTimeout(function () { (f.name.value ? f.topic : f.name).focus({ preventScroll: true }); }, 450);
   });
@@ -402,11 +426,11 @@
     var dl = A.daysUntil(f.deadline.value);
     check(f.name, f.name.value.trim().length > 0);
     check(f.contact, !!A.contactKind(f.contact.value));
-    check(f.service, !!f.service.value);
+    check($('svcPick'), !!f.service.value);
     check(f.topic, f.topic.value.trim().length > 0);
     check(f.deadline, dl !== null && dl >= 0 && dl <= 730);
     if (bad.length) {
-      bad[0].focus();
+      (bad[0].id === 'svcPick' ? bad[0].querySelector('input') : bad[0]).focus({ preventScroll: true });
       bad[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     return !bad.length;
@@ -444,7 +468,7 @@
 
       // Очищаем поля заказа, имя и контакт оставляем
       [f.topic, f.volume, f.deadline, f.subject, f.grade, f.wishes].forEach(function (el) { el.value = ''; });
-      f.service.selectedIndex = 0;
+      form.querySelectorAll('input[name="svc"]').forEach(function (x) { x.checked = false; });
       form.querySelectorAll('input[name="options"]').forEach(function (x) { x.checked = false; });
       updateSummary();
     }).catch(function (err) {

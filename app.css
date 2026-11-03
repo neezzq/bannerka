@@ -1158,3 +1158,27 @@ a { color: var(--text); }
   .my-order-actions { width: 100%; justify-content: stretch; }
   .my-order-actions .btn { flex: 1; }
 }
+
+/* Выбор услуги галочкой */
+.svc-pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.svc-opt {
+  position: relative; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: center;
+  padding: 12px 12px; border: 1.5px solid var(--input); border-radius: 16px; background: var(--card); cursor: pointer;
+  transition: border-color .2s, background-color .25s, transform .25s var(--spring), box-shadow .25s;
+  -webkit-tap-highlight-color: transparent;
+}
+.svc-opt:active { transform: scale(.97); }
+.svc-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.svc-tick {
+  grid-row: span 2; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  border: 1.5px solid var(--input); color: transparent; transition: background-color .2s, border-color .2s, color .2s, transform .35s var(--spring);
+}
+.svc-name { font-weight: 600; font-size: 14px; line-height: 1.25; }
+.svc-price { font-size: 13px; color: var(--muted); }
+.svc-opt:has(input:checked) { border-color: var(--text); box-shadow: 0 0 0 1px var(--text); }
+.svc-opt input:checked + .svc-tick { background: var(--text); border-color: var(--text); color: var(--on-accent); transform: scale(1.08); }
+.svc-opt input:focus-visible + .svc-tick { outline: 3px solid rgba(127, 127, 127, .4); outline-offset: 2px; }
+.field.invalid .svc-opt { border-color: var(--red); }
+.service.picked { box-shadow: 0 0 0 2px var(--text); }
+.service.picked [data-pick] { background: var(--text); color: var(--on-accent); }
+@media (min-width: 600px) { .svc-pick { grid-template-columns: repeat(4, 1fr); } .order-grid .svc-pick { grid-template-columns: repeat(2, 1fr); } }
