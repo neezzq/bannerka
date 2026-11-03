@@ -785,3 +785,34 @@ img { max-width: 100%; display: block; }
   .admin .ios-hint { bottom: calc(80px + var(--safe-bottom)); }
   .admin .toast { bottom: calc(84px + var(--safe-bottom)); }
 }
+
+/* Поддержка в Telegram */
+.support-fab {
+  position: fixed;
+  right: calc(16px + var(--safe-right, 0px));
+  bottom: calc(16px + var(--safe-bottom));
+  z-index: 40;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 18px 12px 14px;
+  border-radius: 999px;
+  background: #2aabee;
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+  box-shadow: 0 10px 28px rgba(42, 171, 238, .35);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.support-fab:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(42, 171, 238, .45); color: #fff; }
+.support-fab[hidden] { display: none; }
+.site-footer { padding-bottom: calc(84px + var(--safe-bottom)); }
+@media (max-width: 599px) {
+  .topnav .support-link { display: none; }
+  .support-fab span { display: none; }
+  .support-fab { padding: 14px; }
+}
+
+/* Редактор шагов в админке */
+.steps-edit { display: grid; gap: 8px; }
+.step-edit { display: grid; grid-template-columns: 40px 1fr; gap: 6px 10px; align-items: center; }
+.step-edit .step-num { width: 36px; height: 36px; font-size: 15px; grid-row: span 2; }

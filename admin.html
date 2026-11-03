@@ -85,7 +85,7 @@
         <div>
           <div class="panel card">
             <h2>Услуги</h2>
-            <p class="panel-desc">Цена = цена за единицу × объём, но не меньше минимума.</p>
+            <p class="panel-desc">Ориентировочная цена за весь проект. Итог = цена услуги + опции + наценка за срочность.</p>
             <div class="edit-list" id="svcList"></div>
             <button type="button" class="btn btn-soft add-btn" id="addSvc">+ Добавить услугу</button>
           </div>
@@ -118,6 +118,10 @@
             <h2>Тексты сайта</h2>
             <div class="texts-grid">
               <div class="field">
+                <label for="tEyebrow">Надпись над заголовком</label>
+                <input id="tEyebrow" maxlength="60" data-cfg>
+              </div>
+              <div class="field">
                 <label for="tTitle">Заголовок</label>
                 <input id="tTitle" maxlength="120" data-cfg>
               </div>
@@ -126,12 +130,28 @@
                 <textarea id="tSubtitle" maxlength="400" data-cfg></textarea>
               </div>
               <div class="field">
+                <label>Три шага под заголовком</label>
+                <div id="stepsEdit" class="steps-edit"></div>
+              </div>
+              <div class="field">
+                <label for="tPricesText">Текст над ценами</label>
+                <textarea id="tPricesText" maxlength="300" data-cfg></textarea>
+              </div>
+              <div class="field">
                 <label for="tContact">Мой контакт</label>
                 <input id="tContact" maxlength="100" placeholder="@username или телефон" data-cfg>
               </div>
               <div class="field">
+                <label for="tSupport">Поддержка (Telegram)</label>
+                <input id="tSupport" maxlength="100" placeholder="@username" data-cfg>
+              </div>
+              <div class="field">
                 <label for="tNote">Примечание под ценой</label>
                 <textarea id="tNote" maxlength="600" data-cfg></textarea>
+              </div>
+              <div class="field">
+                <label for="tFooter">Текст внизу страницы</label>
+                <input id="tFooter" maxlength="200" data-cfg>
               </div>
             </div>
           </div>
@@ -316,8 +336,7 @@
 
   function normalizeOrder(o) {
     var r = {};
-    ['id', 'created', 'name', 'contact', 'service', 'volume', 'unit', 'topic', 'subject', 'grade', 'deadline',
-     'options', 'wishes', 'calcPrice', 'status', 'price', 'paid', 'expenses', 'notes'].forEach(function (k) {
+    A.ORDER_FIELDS.forEach(function (k) {
       r[k] = o[k] == null ? '' : String(o[k]);
     });
     if (!A.STATUSES.some(function (s) { return s.id === r.status; })) r.status = 'new';
@@ -460,7 +479,7 @@
     var contact = href
       ? '<a class="order-contact" href="' + A.esc(href) + '"' + (href.indexOf('http') === 0 ? ' target="_blank" rel="noopener"' : '') + '>' + A.esc(o.contact) + '</a>'
       : '<span class="order-contact">' + A.esc(o.contact) + '</span>';
-    var vol = o.volume ? o.volume + ' ' + A.unitText(o.unit, A.num(o.volume)) : '';
+    var vol = o.volume;
     var statusOpts = A.STATUSES.map(function (s) {
       return '<option value="' + s.id + '"' + (s.id === o.status ? ' selected' : '') + '>' + s.label + '</option>';
     }).join('');
@@ -603,22 +622,12 @@
 
   /* ===== Цены ===== */
 
-  function unitSelect(value) {
-    var units = A.UNITS.slice();
-    if (value && units.indexOf(value) === -1) units.push(value);
-    return '<select data-k="unit">' + units.map(function (u) {
-      return '<option value="' + A.esc(u) + '"' + (u === value ? ' selected' : '') + '>' + A.esc(u) + '</option>';
-    }).join('') + '</select>';
-  }
-
   function svcHtml(s, i) {
     return '<div class="edit-item" data-id="' + A.esc(s.id) + '">' +
       '<div class="edit-head"><b>Услуга ' + (i + 1) + '</b><button type="button" class="btn btn-danger btn-sm" data-remove>Удалить</button></div>' +
-      '<div class="field"><label>Название</label><input data-k="name" maxlength="80" value="' + A.esc(s.name) + '"></div>' +
-      '<div class="edit-row">' +
-        '<div class="field"><label>Единица</label>' + unitSelect(s.unit) + '</div>' +
-        '<div class="field"><label>Цена за ед., ₽</label><input data-k="price" inputmode="numeric" value="' + A.esc(s.price) + '"></div>' +
-        '<div class="field"><label>Минимум, ₽</label><input data-k="min" inputmode="numeric" value="' + A.esc(s.min) + '"></div>' +
+      '<div class="edit-row-opt" style="grid-template-columns:1fr 130px">' +
+        '<div class="field"><label>Название</label><input data-k="name" maxlength="80" value="' + A.esc(s.name) + '"></div>' +
+        '<div class="field"><label>Цена за проект, ₽</label><input data-k="price" inputmode="numeric" value="' + A.esc(s.price) + '"></div>' +
       '</div>' +
       '<div class="field"><label>Описание</label><textarea data-k="desc" maxlength="400" style="min-height:72px">' + A.esc(s.desc) + '</textarea></div>' +
     '</div>';
@@ -644,6 +653,15 @@
     $('tTitle').value = c.heroTitle;
     $('tSubtitle').value = c.heroSubtitle;
     $('tContact').value = c.contact;
+    $('tEyebrow').value = c.eyebrow;
+    $('tPricesText').value = c.pricesText;
+    $('tSupport').value = c.support;
+    $('tFooter').value = c.footerText;
+    $('stepsEdit').innerHTML = c.steps.map(function (st, i) {
+      return '<div class="step-edit"><span class="step-num">' + (i + 1) + '</span>' +
+        '<input class="input" data-step="title" maxlength="60" placeholder="Заголовок шага" value="' + A.esc(st.title) + '">' +
+        '<input class="input" data-step="sub" maxlength="100" placeholder="Пояснение" value="' + A.esc(st.sub) + '"></div>';
+    }).join('');
     $('tNote').value = c.note;
     setPricesDirty(false);
   }
@@ -657,14 +675,21 @@
       });
     }
     return {
-      services: items('svcList', ['name', 'unit', 'price', 'min', 'desc']),
+      services: items('svcList', ['name', 'price', 'desc']),
       options: items('optList', ['name', 'price']),
       urgency: { days: $('urgDays').value, percent: $('urgPercent').value },
       prepay: $('prepay').value,
       heroTitle: $('tTitle').value,
       heroSubtitle: $('tSubtitle').value,
       contact: $('tContact').value,
-      note: $('tNote').value
+      note: $('tNote').value,
+      eyebrow: $('tEyebrow').value,
+      pricesText: $('tPricesText').value,
+      support: $('tSupport').value,
+      footerText: $('tFooter').value,
+      steps: Array.prototype.map.call($('stepsEdit').querySelectorAll('.step-edit'), function (el) {
+        return { title: el.querySelector('[data-step="title"]').value, sub: el.querySelector('[data-step="sub"]').value };
+      })
     };
   }
 
@@ -699,7 +724,7 @@
 
   $('addSvc').addEventListener('click', function () {
     var n = $('svcList').querySelectorAll('.edit-item').length;
-    $('svcList').insertAdjacentHTML('beforeend', svcHtml({ id: A.uid('s'), name: '', unit: 'стр.', price: 100, min: 500, desc: '' }, n));
+    $('svcList').insertAdjacentHTML('beforeend', svcHtml({ id: A.uid('s'), name: '', price: 1000, desc: '' }, n));
     var items = $('svcList').querySelectorAll('.edit-item');
     items[items.length - 1].querySelector('[data-k="name"]').focus();
     setPricesDirty(true);
@@ -721,7 +746,7 @@
     var problems = [];
     raw.services.forEach(function (s, i) {
       if (!s.name.trim()) problems.push('Укажите название услуги ' + (i + 1));
-      if (!isNonNegNumber(s.price) || !isNonNegNumber(s.min)) problems.push('Проверьте цены у услуги ' + (i + 1));
+      if (!isNonNegNumber(s.price)) problems.push('Проверьте цены у услуги ' + (i + 1));
     });
     raw.options.forEach(function (o, i) {
       if (!o.name.trim()) problems.push('Укажите название опции ' + (i + 1));

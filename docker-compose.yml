@@ -1,0 +1,22 @@
+# Сайт заказов: один контейнер на Node.js, без внешних зависимостей.
+name: banerka-site
+# Заявки и настройки лежат в папке ./data (её и нужно бэкапить).
+services:
+  app:
+    image: node:22-alpine
+    container_name: bannerka-site
+    working_dir: /app
+    command: ["node", "server/server.js"]
+    env_file: .env
+    environment:
+      PORT: "3000"
+      DATA_DIR: /data
+    volumes:
+      - ./:/app:ro
+      - ./data:/data
+    ports:
+      - "127.0.0.1:18081:3000"
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "3" }

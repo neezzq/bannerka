@@ -32,6 +32,7 @@
     </a>
     <nav class="topnav" aria-label="Разделы">
       <a href="#prices">Цены</a>
+      <a href="#" class="support-link" data-support target="_blank" rel="noopener">Поддержка</a>
       <a href="#order" class="btn btn-sm btn-primary">Заказать</a>
     </nav>
   </div>
@@ -40,7 +41,7 @@
 <main id="top">
   <!-- Первый экран -->
   <section class="hero wrap">
-    <span class="eyebrow">Принимаю заказы</span>
+    <span class="eyebrow" id="eyebrow">Принимаю заказы</span>
     <h1 id="heroTitle">Доклады и презентации на заказ</h1>
     <p class="lead" id="heroSubtitle"></p>
     <div class="hero-actions">
@@ -50,15 +51,15 @@
     <ol class="steps">
       <li class="step card">
         <span class="step-num">1</span>
-        <div><b>Заполните заявку</b><span class="sub">Цена посчитается сразу</span></div>
+        <div><b data-step-title>Заполните заявку</b><span class="sub" data-step-sub>Цена посчитается сразу</span></div>
       </li>
       <li class="step card">
         <span class="step-num">2</span>
-        <div><b>Я свяжусь с вами</b><span class="sub">Обсудим детали и предоплату</span></div>
+        <div><b data-step-title>Я свяжусь с вами</b><span class="sub" data-step-sub>Обсудим детали и предоплату</span></div>
       </li>
       <li class="step card">
         <span class="step-num">3</span>
-        <div><b>Получите работу</b><span class="sub">Точно к нужной дате</span></div>
+        <div><b data-step-title>Получите работу</b><span class="sub" data-step-sub>Точно к нужной дате</span></div>
       </li>
     </ol>
   </section>
@@ -67,7 +68,7 @@
   <section id="prices" class="section wrap">
     <div class="section-head">
       <h2>Цены</h2>
-      <p>Стоимость зависит от объёма. Выберите услугу — она подставится в заявку.</p>
+      <p id="pricesText"></p>
     </div>
     <div class="services" id="servicesGrid"></div>
     <div class="extras">
@@ -119,9 +120,8 @@
         </div>
         <div class="row-2">
           <div class="field">
-            <label for="f-volume" id="volumeLabel">Объём <span class="req">*</span></label>
-            <input id="f-volume" name="volume" type="number" inputmode="numeric" min="1" max="1000" step="1" required placeholder="10">
-            <div class="err">Укажите объём от 1 до 1000</div>
+            <label for="f-volume">Объём</label>
+            <input id="f-volume" name="volume" maxlength="100" placeholder="Например, 15 слайдов или 10 минут">
           </div>
           <div class="field">
             <label for="f-deadline">Нужно к <span class="req">*</span></label>
@@ -158,7 +158,7 @@
       </form>
 
       <aside class="summary card" aria-live="polite">
-        <h3>Предварительная цена</h3>
+        <h3>Ориентировочная цена</h3>
         <div id="summaryBody"></div>
         <div class="form-error" id="formError" hidden></div>
         <button type="submit" form="orderForm" class="btn btn-primary btn-lg btn-block" id="submitBtn">Отправить заявку</button>
@@ -170,8 +170,14 @@
 
 <footer class="site-footer wrap">
   <div id="footerContact"></div>
-  <div style="margin-top:4px">© <span id="year"></span> · Доклады и презентации на заказ</div>
+  <div style="margin-top:4px">© <span id="year"></span> · <span id="footerText">Доклады и презентации на заказ</span></div>
 </footer>
+
+<!-- Кнопка поддержки -->
+<a href="#" class="support-fab" data-support target="_blank" rel="noopener" aria-label="Написать в поддержку в Telegram" hidden>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.9 4.3 18.7 19.4c-.2 1.1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.3-5 9.2-8.3c.4-.4-.1-.6-.6-.2L6.1 13 1.2 11.5c-1.1-.3-1.1-1.1.2-1.6L20.6 2.6c.9-.3 1.7.2 1.3 1.7z"/></svg>
+  <span>Поддержка</span>
+</a>
 
 <!-- Окно «Заявка отправлена» -->
 <div class="modal" id="doneModal" hidden role="dialog" aria-modal="true" aria-labelledby="doneTitle">
@@ -180,7 +186,7 @@
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
     </div>
     <h2 id="doneTitle">Заявка отправлена</h2>
-    <p>Я скоро свяжусь с вами, чтобы обсудить детали.</p>
+    <p>Я скоро свяжусь с вами, чтобы обсудить детали.<br><span id="doneSupport"></span></p>
     <div class="modal-facts">
       <div class="modal-fact"><span>Номер заявки</span><b id="doneId">—</b></div>
       <div class="modal-fact"><span>Сумма</span><b id="doneTotal">—</b></div>
@@ -218,8 +224,6 @@
     f.contact.value = saved.contact || '';
   }
 
-  function perUnit(unit) { return A.unitText(unit, 1); }
-
   function contactLinkHtml(contact) {
     var href = A.contactHref(contact);
     var text = A.esc(contact);
@@ -227,6 +231,24 @@
   }
 
   function renderTexts() {
+    $('eyebrow').textContent = config.eyebrow;
+    $('eyebrow').hidden = !config.eyebrow;
+    var titles = document.querySelectorAll('[data-step-title]');
+    var subs = document.querySelectorAll('[data-step-sub]');
+    config.steps.forEach(function (st, i) {
+      titles[i].textContent = st.title;
+      subs[i].textContent = st.sub;
+      titles[i].closest('.step').hidden = !st.title && !st.sub;
+    });
+    $('pricesText').textContent = config.pricesText;
+    $('pricesText').hidden = !config.pricesText;
+    $('footerText').textContent = config.footerText;
+    var supportHref = A.contactHref(config.support);
+    document.querySelectorAll('[data-support]').forEach(function (a) {
+      a.hidden = !supportHref;
+      if (supportHref) a.href = supportHref;
+    });
+    $('doneSupport').innerHTML = config.support ? 'Если что-то срочно — пишите: ' + contactLinkHtml(config.support) : '';
     $('heroTitle').textContent = config.heroTitle;
     $('heroSubtitle').textContent = config.heroSubtitle;
     $('heroSubtitle').hidden = !config.heroSubtitle;
@@ -243,8 +265,8 @@
     $('servicesGrid').innerHTML = config.services.map(function (s) {
       return '<article class="service card">' +
         '<h3>' + A.esc(s.name) + '</h3>' +
-        '<div class="service-price"><span class="amount">' + A.money(s.price) + '</span><span class="per">/ ' + A.esc(perUnit(s.unit)) + '</span></div>' +
-        (s.min ? '<span class="service-min">от ' + A.money(s.min) + '</span>' : '') +
+        '<div class="service-price"><span class="amount">≈ ' + A.money(s.price) + '</span></div>' +
+        '<span class="service-min">за весь проект</span>' +
         (s.desc ? '<p>' + A.esc(s.desc) + '</p>' : '<p></p>') +
         '<button type="button" class="btn btn-soft btn-block" data-pick="' + A.esc(s.id) + '">Выбрать</button>' +
         '</article>';
@@ -268,7 +290,7 @@
     var current = f.service.value;
     f.service.innerHTML = '<option value="" disabled' + (current ? '' : ' selected') + '>Выберите услугу</option>' +
       config.services.map(function (s) {
-        return '<option value="' + A.esc(s.id) + '">' + A.esc(s.name) + ' — ' + A.money(s.price) + '/' + A.esc(perUnit(s.unit)) + '</option>';
+        return '<option value="' + A.esc(s.id) + '">' + A.esc(s.name) + ' — ≈ ' + A.money(s.price) + '</option>';
       }).join('');
     if (current && config.services.some(function (s) { return s.id === current; })) f.service.value = current;
 
@@ -295,24 +317,16 @@
 
   function updateSummary() {
     var input = readForm();
-    var service = config.services.filter(function (s) { return s.id === input.serviceId; })[0];
-    $('volumeLabel').innerHTML = 'Объём' + (service ? ', ' + A.esc(A.UNIT_LABELS[service.unit] || service.unit) : '') + ' <span class="req">*</span>';
-
     var c = A.calcPrice(config, input);
     if (!c.ok) {
       $('summaryBody').innerHTML =
         '<div class="summary-total">— <small>₽</small></div>' +
-        '<p class="summary-empty">' + (service ? 'Укажите объём — цена посчитается автоматически.' : 'Выберите услугу и укажите объём — цена посчитается автоматически.') + '</p>' +
+        '<p class="summary-empty">Выберите услугу — цена посчитается автоматически.</p>' +
         (config.note ? '<p class="summary-note">' + A.esc(config.note) + '</p>' : '');
       return;
     }
     var lines = [];
-    var vol = c.volume + ' ' + A.unitText(c.service.unit, c.volume);
-    if (c.minApplied) {
-      lines.push('<li><span>' + A.esc(c.service.name) + ', ' + A.esc(vol) + ' (минимальная стоимость)</span><span>' + A.money(c.base) + '</span></li>');
-    } else {
-      lines.push('<li><span>' + A.esc(c.service.name) + ': ' + A.esc(vol) + ' × ' + A.money(c.service.price) + '</span><span>' + A.money(c.base) + '</span></li>');
-    }
+    lines.push('<li><span>' + A.esc(c.service.name) + ' (весь проект)</span><span>' + A.money(c.base) + '</span></li>');
     c.options.forEach(function (o) {
       lines.push('<li><span>' + A.esc(o.name) + '</span><span>+' + A.money(o.price) + '</span></li>');
     });
@@ -321,7 +335,7 @@
       lines.push('<li class="urgent"><span>Срочность (' + when + '), +' + config.urgency.percent + '%</span><span>+' + A.money(c.urgencySum) + '</span></li>');
     }
     $('summaryBody').innerHTML =
-      '<div class="summary-total">' + A.money(c.total) + '</div>' +
+      '<div class="summary-total">≈ ' + A.money(c.total) + '</div>' +
       '<ul class="summary-lines">' + lines.join('') + '</ul>' +
       (config.prepay > 0 ? '<div class="summary-prepay"><span>Предоплата ' + config.prepay + '%</span><b>' + A.money(c.prepay) + '</b></div>' : '') +
       (config.note ? '<p class="summary-note">' + A.esc(config.note) + '</p>' : '');
@@ -365,13 +379,11 @@
       field.classList.toggle('invalid', !ok);
       if (!ok) bad.push(el);
     }
-    var vol = Number(f.volume.value);
     var dl = A.daysUntil(f.deadline.value);
     check(f.name, f.name.value.trim().length > 0);
     check(f.contact, f.contact.value.trim().length >= 3);
     check(f.service, !!f.service.value);
     check(f.topic, f.topic.value.trim().length > 0);
-    check(f.volume, Number.isInteger(vol) && vol >= 1 && vol <= 1000);
     check(f.deadline, dl !== null && dl >= 0 && dl <= 730);
     if (bad.length) {
       bad[0].focus();
@@ -396,7 +408,7 @@
       var total = res.total != null ? res.total : calc.total;
       var prepay = res.prepay != null ? res.prepay : calc.prepay;
       $('doneId').textContent = '№' + (res.id || '—');
-      $('doneTotal').textContent = A.money(total);
+      $('doneTotal').textContent = '≈ ' + A.money(total);
       $('donePrepay').textContent = config.prepay > 0 ? 'Предоплата ' + config.prepay + '%: ' + A.money(prepay) : '';
       $('doneModal').hidden = false;
       $('doneClose').focus();

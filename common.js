@@ -5,25 +5,37 @@
 (function () {
   'use strict';
 
-  var CFG = window.APP_CONFIG || {};
+  var IS_BROWSER = typeof window !== 'undefined' && typeof document !== 'undefined';
+  var CFG = (IS_BROWSER && window.APP_CONFIG) || {};
   var API_URL = String(CFG.API_URL || '').trim();
-  var DEMO = !API_URL;
+  var DEMO = IS_BROWSER && !API_URL;
 
   /* ---------- Настройки по умолчанию ---------- */
 
+  var SUPPORT = '@neezzy';
+
   var DEFAULT_CONFIG = {
+    eyebrow: 'Принимаю заказы',
     heroTitle: 'Доклады и презентации на заказ',
-    heroSubtitle: 'Сделаю доклад, презентацию или текст выступления точно к сроку. Цену видно сразу — без сюрпризов.',
-    contact: '@your_telegram',
-    note: 'Цена предварительная — точную сумму подтвержу, когда обсудим детали. Работу начинаю после предоплаты.',
+    heroSubtitle: 'Сделаю доклад, презентацию или текст выступления точно к сроку. Ориентировочную цену видно сразу.',
+    steps: [
+      { title: 'Заполните заявку', sub: 'Цена посчитается сразу' },
+      { title: 'Я свяжусь с вами', sub: 'Обсудим детали и предоплату' },
+      { title: 'Получите работу', sub: 'Точно к нужной дате' }
+    ],
+    pricesText: 'Цены ориентировочные — за весь проект целиком. Выберите услугу — она подставится в заявку.',
+    contact: SUPPORT,
+    support: SUPPORT,
+    note: 'Цена ориентировочная — точную сумму подтвержу, когда обсудим детали. Работу начинаю после предоплаты.',
+    footerText: 'Доклады и презентации на заказ',
     services: [
-      { id: 'report', name: 'Доклад', unit: 'стр.', price: 150, min: 800,
+      { id: 'report', name: 'Доклад', price: 1000,
         desc: 'Структурированный текст: введение, основная часть, выводы и список источников.' },
-      { id: 'slides', name: 'Презентация', unit: 'слайд', price: 100, min: 700,
+      { id: 'slides', name: 'Презентация', price: 1200,
         desc: 'Современный аккуратный дизайн, схемы и иллюстрации, минимум текста на слайдах.' },
-      { id: 'combo', name: 'Доклад + презентация', unit: 'стр.', price: 230, min: 1300,
-        desc: 'Доклад и презентация к нему в едином стиле. Объём считается по страницам доклада.' },
-      { id: 'speech', name: 'Текст выступления', unit: 'мин', price: 80, min: 400,
+      { id: 'combo', name: 'Доклад + презентация', price: 2000,
+        desc: 'Доклад и презентация к нему в едином стиле.' },
+      { id: 'speech', name: 'Текст выступления', price: 600,
         desc: 'Текст, который удобно читать вслух, под нужную длительность выступления.' }
     ],
     options: [
@@ -42,15 +54,6 @@
     { id: 'cancelled', label: 'Отменён' }
   ];
   var ACTIVE_STATUSES = ['new', 'work', 'revision'];
-
-  var UNITS = ['стр.', 'слайд', 'мин', 'шт.'];
-  var UNIT_FORMS = {
-    'стр.': ['стр.', 'стр.', 'стр.'],
-    'слайд': ['слайд', 'слайда', 'слайдов'],
-    'мин': ['мин', 'мин', 'мин'],
-    'шт.': ['шт.', 'шт.', 'шт.']
-  };
-  var UNIT_LABELS = { 'стр.': 'страниц', 'слайд': 'слайдов', 'мин': 'минут', 'шт.': 'штук' };
 
   /* ---------- Мелкие помощники ---------- */
 
@@ -91,11 +94,6 @@
     if (n1 > 1 && n1 < 5) return forms[1];
     if (n1 === 1) return forms[0];
     return forms[2];
-  }
-
-  function unitText(unit, n) {
-    var forms = UNIT_FORMS[unit];
-    return forms ? plural(n, forms) : unit;
   }
 
   function pad(n) { return (n < 10 ? '0' : '') + n; }
@@ -170,9 +168,7 @@
       return {
         id: cleanId(s.id, 's'),
         name: str(s.name, 80),
-        unit: str(s.unit, 15) || 'стр.',
-        price: Math.round(clampNum(s.price, 0, 1e6, 0)),
-        min: Math.round(clampNum(s.min, 0, 1e7, 0)),
+        price: Math.round(clampNum(s.price, 0, 1e7, 0)),
         desc: str(s.desc, 400)
       };
     }).filter(function (s) { return s.name; });
@@ -183,13 +179,24 @@
       return { id: cleanId(o.id, 'o'), name: str(o.name, 80), price: Math.round(clampNum(o.price, 0, 1e6, 0)) };
     }).filter(function (o) { return o.name; });
 
+    var rawSteps = Array.isArray(raw.steps) ? raw.steps : d.steps;
+    var steps = [0, 1, 2].map(function (i) {
+      var st = rawSteps[i] || {};
+      return { title: str(st.title, 60), sub: str(st.sub, 100) };
+    });
+
     var u = raw.urgency || d.urgency;
     function text(key, max) { return raw[key] == null ? d[key] : str(raw[key], max); }
     return {
+      eyebrow: text('eyebrow', 60),
       heroTitle: text('heroTitle', 120),
       heroSubtitle: text('heroSubtitle', 400),
+      steps: steps,
+      pricesText: text('pricesText', 300),
       contact: text('contact', 100),
+      support: text('support', 100),
       note: text('note', 600),
+      footerText: text('footerText', 200),
       services: services,
       options: options,
       urgency: {
@@ -200,21 +207,20 @@
     };
   }
 
-  /* ---------- Расчёт цены (такая же формула — в Code.gs) ---------- */
+  /* ---------- Расчёт цены (этот же код работает на сервере) ---------- */
 
   /**
-   * input: { serviceId, volume, deadline: 'YYYY-MM-DD', options: [id, ...] }
+   * Цена услуги — ориентировочная, за весь проект.
+   * input: { serviceId, deadline: 'YYYY-MM-DD', options: [id, ...] }
    */
   function calcPrice(config, input, today) {
     var service = null;
     for (var i = 0; i < config.services.length; i++) {
       if (config.services[i].id === input.serviceId) service = config.services[i];
     }
-    var volume = Math.floor(num(input.volume));
-    if (!service || volume < 1) return { ok: false, service: service };
+    if (!service) return { ok: false, service: null };
 
-    var raw = service.price * volume;
-    var base = Math.max(raw, service.min);
+    var base = service.price;
     var chosen = config.options.filter(function (o) {
       return (input.options || []).indexOf(o.id) !== -1;
     });
@@ -227,14 +233,13 @@
     var total = round10(base + optionsSum + urgencySum);
     var prepay = round10(total * config.prepay / 100);
     return {
-      ok: true, service: service, volume: volume, raw: raw, base: base,
-      minApplied: raw < service.min, options: chosen, optionsSum: optionsSum,
+      ok: true, service: service, base: base, options: chosen, optionsSum: optionsSum,
       daysLeft: daysLeft, urgent: urgent, urgencySum: urgencySum,
       total: total, prepay: prepay
     };
   }
 
-  /* ---------- Проверка заявки (такая же — в Code.gs) ---------- */
+  /* ---------- Проверка заявки (этот же код работает на сервере) ---------- */
 
   function validateOrder(o, config, today) {
     o = o || {};
@@ -244,7 +249,7 @@
       contact: str(o.contact, 100),
       serviceId: str(o.serviceId, 40),
       topic: str(o.topic, 300),
-      volume: Math.floor(num(o.volume)),
+      volume: str(o.volume, 100),
       deadline: str(o.deadline, 10),
       subject: str(o.subject, 100),
       grade: str(o.grade, 50),
@@ -255,7 +260,6 @@
     if (clean.contact.length < 3) return { error: 'Укажите Telegram или телефон' };
     if (!config.services.some(function (s) { return s.id === clean.serviceId; })) return { error: 'Выберите услугу' };
     if (!clean.topic) return { error: 'Укажите тему' };
-    if (!(clean.volume >= 1 && clean.volume <= 1000)) return { error: 'Объём должен быть от 1 до 1000' };
     if (!isDateStr(clean.deadline)) return { error: 'Укажите дату, к которой нужна работа' };
     var dl = daysUntil(clean.deadline, today);
     if (dl < 0) return { error: 'Дата не может быть раньше сегодняшней' };
@@ -263,6 +267,82 @@
     clean.options = config.options.filter(function (x) { return clean.options.indexOf(x.id) !== -1; }).map(function (x) { return x.id; });
     var calc = calcPrice(config, clean, today);
     return { clean: clean, calc: calc };
+  }
+
+  var ORDER_FIELDS = ['id', 'created', 'name', 'contact', 'service', 'volume', 'topic', 'subject', 'grade',
+    'deadline', 'options', 'wishes', 'calcPrice', 'status', 'price', 'paid', 'expenses', 'notes'];
+
+  function statusLabel(id) {
+    for (var i = 0; i < STATUSES.length; i++) if (STATUSES[i].id === id) return STATUSES[i].label;
+    return id;
+  }
+
+  function nowStamp() {
+    var d = new Date();
+    return todayStr() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function buildOrderRow(id, created, clean, calc) {
+    return {
+      id: String(id), created: created,
+      name: clean.name, contact: clean.contact,
+      service: calc.service.name, volume: clean.volume,
+      topic: clean.topic, subject: clean.subject, grade: clean.grade,
+      deadline: clean.deadline,
+      options: calc.options.map(function (o) { return o.name; }).join(', '),
+      wishes: clean.wishes, calcPrice: String(calc.total),
+      status: 'new', price: String(calc.total), paid: '', expenses: '', notes: ''
+    };
+  }
+
+  function ApiError(message, code) {
+    var e = new Error(message);
+    e.code = code || '';
+    return e;
+  }
+
+  function moneyField(v) {
+    var s = String(v == null ? '' : v).replace(/\s/g, '').replace(',', '.');
+    if (s === '') return '';
+    var n = parseFloat(s);
+    if (!isFinite(n) || n < 0) throw ApiError('Суммы должны быть числами не меньше нуля', 'validation');
+    return String(Math.round(Math.min(n, 1e8)));
+  }
+
+  function applyUpdate(order, f) {
+    f = f || {};
+    if (f.status != null) {
+      if (!STATUSES.some(function (s) { return s.id === f.status; })) throw ApiError('Неизвестный статус', 'validation');
+      order.status = f.status;
+    }
+    if (f.price != null) order.price = moneyField(f.price);
+    if (f.paid != null) order.paid = moneyField(f.paid);
+    if (f.expenses != null) order.expenses = moneyField(f.expenses);
+    if (f.notes != null) order.notes = str(f.notes, 3000);
+  }
+
+  var shared = {
+    DEFAULT_CONFIG: DEFAULT_CONFIG,
+    SUPPORT: SUPPORT,
+    STATUSES: STATUSES,
+    ACTIVE_STATUSES: ACTIVE_STATUSES,
+    ORDER_FIELDS: ORDER_FIELDS,
+    normalizeConfig: normalizeConfig,
+    calcPrice: calcPrice,
+    validateOrder: validateOrder,
+    buildOrderRow: buildOrderRow,
+    applyUpdate: applyUpdate,
+    ApiError: ApiError,
+    statusLabel: statusLabel,
+    esc: esc, num: num, str: str, money: money, plural: plural,
+    todayStr: todayStr, nowStamp: nowStamp, addDays: addDays, daysUntil: daysUntil, fmtDate: fmtDate,
+    isDateStr: isDateStr, contactHref: contactHref, uid: uid, pad: pad
+  };
+
+  // На сервере (Node.js) браузерная часть не нужна.
+  if (!IS_BROWSER) {
+    if (typeof module !== 'undefined' && module.exports) module.exports = shared;
+    return;
   }
 
   /* ---------- Хранилище браузера ---------- */
@@ -282,24 +362,21 @@
 
   /* ---------- API ---------- */
 
-  function ApiError(message, code) {
-    var e = new Error(message);
-    e.code = code || '';
-    return e;
-  }
-
   function api(action, data) {
     var payload = Object.assign({ action: action }, data || {});
     if (DEMO) return demoApi(payload);
-    // Без заголовка Content-Type браузер отправляет text/plain — это «простой» запрос без CORS-preflight.
-    return fetch(API_URL, { method: 'POST', body: JSON.stringify(payload), redirect: 'follow' })
+    return fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      cache: 'no-store'
+    })
       .catch(function () {
         throw ApiError('Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.', 'network');
       })
       .then(function (res) {
-        if (!res.ok) throw ApiError('Сервер ответил ошибкой (' + res.status + ')', 'http');
         return res.json().catch(function () {
-          throw ApiError('Сервер вернул непонятный ответ. Проверьте адрес скрипта и доступ «Все».', 'parse');
+          throw ApiError('Сервер ответил ошибкой (' + res.status + ')', 'http');
         });
       })
       .then(function (json) {
@@ -308,7 +385,7 @@
       });
   }
 
-  var CONFIG_CACHE_KEY = 'zk_config_cache';
+  var CONFIG_CACHE_KEY = 'zk_config_cache_v2';
 
   /** Сразу отдаёт сохранённые настройки, затем подгружает свежие. */
   function loadConfig(onConfig) {
@@ -326,55 +403,28 @@
     });
   }
 
-  /* ---------- Демо-режим (всё в localStorage) ---------- */
+  /* ---------- Демо-режим (всё в localStorage, когда API_URL пустой) ---------- */
 
-  var DEMO_ORDERS = 'zk_demo_orders';
-  var DEMO_CONFIG = 'zk_demo_config';
+  var DEMO_ORDERS = 'zk_demo_orders_v2';
+  var DEMO_CONFIG = 'zk_demo_config_v2';
   var DEMO_PASSWORD = 'demo';
 
   function delay(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
-  function statusLabel(id) {
-    for (var i = 0; i < STATUSES.length; i++) if (STATUSES[i].id === id) return STATUSES[i].label;
-    return id;
-  }
-
-  function nowStamp() {
-    var d = new Date();
-    return todayStr() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-  }
-
-  function buildOrderRow(id, created, clean, calc) {
-    return {
-      id: String(id), created: created,
-      name: clean.name, contact: clean.contact,
-      service: calc.service.name, volume: String(clean.volume), unit: calc.service.unit,
-      topic: clean.topic, subject: clean.subject, grade: clean.grade,
-      deadline: clean.deadline,
-      options: calc.options.map(function (o) { return o.name; }).join(', '),
-      wishes: clean.wishes, calcPrice: String(calc.total),
-      status: 'new', price: String(calc.total), paid: '', expenses: '', notes: ''
-    };
-  }
-
   function demoSeed(cfg) {
     var t = todayStr();
     var samples = [
-      [-24, { name: 'Мария', contact: '@maria_k', serviceId: 'combo', topic: 'Возобновляемые источники энергии', volume: 12, subject: 'Физика', grade: '10 класс', options: ['plagiarism'] }, -14, { status: 'done', paid: 'full', expenses: '0' }],
-      [-9, { name: 'Игорь', contact: '+7 912 345-67-89', serviceId: 'slides', topic: 'История развития интернета', volume: 15, subject: 'Информатика', grade: '2 курс', options: ['notes'] }, -2, { status: 'done', paid: 'full', expenses: '150', notes: 'Шаблон купил отдельно' }],
-      [-3, { name: 'Анна', contact: '@anna_study', serviceId: 'report', topic: 'Творчество А. С. Пушкина', volume: 8, subject: 'Литература', grade: '9 класс', options: [] }, 2, { status: 'work', paid: 'half' }],
-      [-1, { name: 'Дмитрий', contact: '@dima_pro', serviceId: 'speech', topic: 'Защита курсового проекта', volume: 7, subject: 'Экономика', grade: '3 курс', options: [], wishes: 'Спокойный деловой стиль' }, 6, { status: 'new' }],
-      [-6, { name: 'Ольга', contact: '+7 900 111-22-33', serviceId: 'slides', topic: 'Экосистема тундры', volume: 10, subject: 'Биология', grade: '7 класс', options: [] }, -1, { status: 'revision', paid: 'half' }]
+      [-24, { name: 'Мария', contact: '@maria_k', serviceId: 'combo', topic: 'Возобновляемые источники энергии', volume: '12 страниц', subject: 'Физика', grade: '10 класс', options: ['plagiarism'] }, -14, { status: 'done', paid: 'full', expenses: '0' }],
+      [-9, { name: 'Игорь', contact: '+7 912 345-67-89', serviceId: 'slides', topic: 'История развития интернета', volume: '15 слайдов', subject: 'Информатика', grade: '2 курс', options: ['notes'] }, -2, { status: 'done', paid: 'full', expenses: '150', notes: 'Шаблон купил отдельно' }],
+      [-3, { name: 'Анна', contact: '@anna_study', serviceId: 'report', topic: 'Творчество А. С. Пушкина', volume: '8 страниц', subject: 'Литература', grade: '9 класс', options: [] }, 2, { status: 'work', paid: 'half' }],
+      [-1, { name: 'Дмитрий', contact: '@dima_pro', serviceId: 'speech', topic: 'Защита курсового проекта', volume: '7 минут', subject: 'Экономика', grade: '3 курс', options: [], wishes: 'Спокойный деловой стиль' }, 6, { status: 'new' }]
     ];
     return samples.map(function (s, i) {
       var created = addDays(t, s[0]);
-      var input = Object.assign({ deadline: addDays(t, s[2]) }, s[1]);
+      var input = Object.assign({ deadline: addDays(t, s[2]), wishes: '' }, s[1]);
       var calc = calcPrice(cfg, input, created);
       if (!calc.ok) return null;
-      var row = buildOrderRow(i + 1, created + ' ' + pad(10 + i) + ':' + pad(i * 7), {
-        name: input.name, contact: input.contact, topic: input.topic, volume: input.volume,
-        subject: input.subject, grade: input.grade, deadline: input.deadline, wishes: input.wishes || ''
-      }, calc);
+      var row = buildOrderRow(i + 1, created + ' ' + pad(10 + i) + ':' + pad(i * 7), input, calc);
       row.status = s[3].status;
       if (s[3].paid === 'full') row.paid = String(calc.total);
       if (s[3].paid === 'half') row.paid = String(calc.prepay);
@@ -447,32 +497,13 @@
     });
   }
 
-  function moneyField(v) {
-    var s = String(v == null ? '' : v).replace(/\s/g, '').replace(',', '.');
-    if (s === '') return '';
-    var n = parseFloat(s);
-    if (!isFinite(n) || n < 0) throw ApiError('Суммы должны быть числами не меньше нуля');
-    return String(Math.round(Math.min(n, 1e8)));
-  }
-
-  function applyUpdate(order, f) {
-    if (f.status != null) {
-      if (!STATUSES.some(function (s) { return s.id === f.status; })) throw ApiError('Неизвестный статус');
-      order.status = f.status;
-    }
-    if (f.price != null) order.price = moneyField(f.price);
-    if (f.paid != null) order.paid = moneyField(f.paid);
-    if (f.expenses != null) order.expenses = moneyField(f.expenses);
-    if (f.notes != null) order.notes = str(f.notes, 3000);
-  }
-
   /* ---------- Интерфейс: плашка демо, тосты, подсказка iOS, service worker ---------- */
 
   function mountDemoBanner() {
     if (!DEMO) return;
     var b = document.createElement('div');
     b.className = 'demo-banner';
-    b.innerHTML = '<b>Демо-режим</b> — данные хранятся только в этом браузере. Вставьте ссылку на скрипт в config.js.';
+    b.innerHTML = '<b>Демо-режим</b> — данные хранятся только в этом браузере. Заполните API_URL в config.js.';
     document.body.insertBefore(b, document.body.firstChild);
     document.documentElement.classList.add('is-demo');
   }
@@ -536,24 +567,12 @@
 
   registerServiceWorker();
 
-  window.App = {
+  window.App = Object.assign({}, shared, {
     DEMO: DEMO,
-    DEFAULT_CONFIG: DEFAULT_CONFIG,
-    STATUSES: STATUSES,
-    ACTIVE_STATUSES: ACTIVE_STATUSES,
-    UNITS: UNITS,
-    UNIT_LABELS: UNIT_LABELS,
     api: api,
     loadConfig: loadConfig,
-    normalizeConfig: normalizeConfig,
-    calcPrice: calcPrice,
-    validateOrder: validateOrder,
-    statusLabel: statusLabel,
-    esc: esc, num: num, money: money, plural: plural, unitText: unitText,
-    todayStr: todayStr, addDays: addDays, daysUntil: daysUntil, fmtDate: fmtDate,
-    contactHref: contactHref, uid: uid,
     lsGet: lsGet, lsSet: lsSet, lsDel: lsDel,
     mountDemoBanner: mountDemoBanner, toast: toast,
     showIosInstallHint: showIosInstallHint, isStandalone: isStandalone
-  };
+  });
 })();
