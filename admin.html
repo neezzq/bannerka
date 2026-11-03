@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="app.css?v=3">
 </head>
 <body class="admin">
 
@@ -197,8 +197,8 @@
   </nav>
 </div>
 
-<script src="config.js"></script>
-<script src="common.js"></script>
+<script src="config.js?v=3"></script>
+<script src="common.js?v=3"></script>
 <script>
 (function () {
   'use strict';
@@ -764,7 +764,7 @@
     btn.textContent = 'Сохраняю…';
     authApi('saveConfig', { config: cfg }).then(function (res) {
       state.config = A.normalizeConfig(res.config || cfg);
-      A.lsSet('zk_config_cache', state.config);
+      A.lsSet('zk_config_cache_v2', state.config);
       renderPricesEditor();
       A.toast('Цены сохранены — сайт уже показывает новые');
     }).catch(function (err) {
