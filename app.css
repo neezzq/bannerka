@@ -836,3 +836,4 @@ img { max-width: 100%; display: block; }
 .pay-secure { display: flex; align-items: center; justify-content: center; gap: 6px; text-align: center; color: var(--muted); font-size: 13px; margin: 14px 0 0; }
 .pay-secure a { font-weight: 700; text-decoration: none; }
 .done-pay { display: grid; gap: 8px; margin-bottom: 10px; }
+.footer-inn { margin-top: 4px; font-size: 13px; }

@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="app.css?v=4">
+  <link rel="stylesheet" href="app.css?v=5">
 </head>
 <body class="admin">
 
@@ -153,6 +153,10 @@
                 <label for="tFooter">Текст внизу страницы</label>
                 <input id="tFooter" maxlength="200" data-cfg>
               </div>
+              <div class="field">
+                <label for="tInn">ИНН (показывается внизу сайта и на странице оплаты)</label>
+                <input id="tInn" maxlength="12" inputmode="numeric" placeholder="300204777467" data-cfg>
+              </div>
             </div>
           </div>
         </div>
@@ -197,8 +201,8 @@
   </nav>
 </div>
 
-<script src="config.js?v=4"></script>
-<script src="common.js?v=4"></script>
+<script src="config.js?v=5"></script>
+<script src="common.js?v=5"></script>
 <script>
 (function () {
   'use strict';
@@ -669,6 +673,7 @@
     $('tPricesText').value = c.pricesText;
     $('tSupport').value = c.support;
     $('tFooter').value = c.footerText;
+    $('tInn').value = c.inn;
     $('stepsEdit').innerHTML = c.steps.map(function (st, i) {
       return '<div class="step-edit"><span class="step-num">' + (i + 1) + '</span>' +
         '<input class="input" data-step="title" maxlength="60" placeholder="Заголовок шага" value="' + A.esc(st.title) + '">' +
@@ -699,6 +704,7 @@
       pricesText: $('tPricesText').value,
       support: $('tSupport').value,
       footerText: $('tFooter').value,
+      inn: $('tInn').value,
       steps: Array.prototype.map.call($('stepsEdit').querySelectorAll('.step-edit'), function (el) {
         return { title: el.querySelector('[data-step="title"]').value, sub: el.querySelector('[data-step="sub"]').value };
       })
@@ -768,6 +774,7 @@
       if (!isNonNegNumber(v)) problems.push('Срочность и предоплата — только числа');
     });
     if (A.num(raw.prepay) > 100) problems.push('Предоплата не может быть больше 100%');
+    if (raw.inn.trim() && !/^(\d{10}|\d{12})$/.test(raw.inn.trim())) problems.push('ИНН — 10 или 12 цифр');
     if (problems.length) { A.toast(problems[0], 'error'); return; }
 
     var cfg = A.normalizeConfig(raw);

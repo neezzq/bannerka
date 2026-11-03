@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="app.css?v=4">
+  <link rel="stylesheet" href="app.css?v=5">
 </head>
 <body>
 
@@ -35,10 +35,11 @@
     Оплата проходит на защищённой странице ЮKassa: карта, СБП, SberPay, ЮMoney
   </p>
   <p class="pay-secure" id="paySupport"></p>
+  <p class="pay-secure" id="payInn">Исполнитель: ИНН 300204777467</p>
 </main>
 
-<script src="config.js?v=4"></script>
-<script src="common.js?v=4"></script>
+<script src="config.js?v=5"></script>
+<script src="common.js?v=5"></script>
 <script>
 (function () {
   'use strict';
@@ -52,6 +53,8 @@
   var info = null;
 
   A.loadConfig(function (cfg) {
+    $('payInn').textContent = cfg.inn ? 'Исполнитель: ИНН ' + cfg.inn : '';
+    $('payInn').hidden = !cfg.inn;
     var href = A.contactHref(cfg.support);
     $('paySupport').innerHTML = cfg.support
       ? 'Вопросы по оплате: ' + (href ? '<a href="' + A.esc(href) + '" target="_blank" rel="noopener">' + A.esc(cfg.support) + '</a>' : A.esc(cfg.support))

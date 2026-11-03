@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="app.css?v=4">
+  <link rel="stylesheet" href="app.css?v=5">
 </head>
 <body>
 
@@ -171,6 +171,7 @@
 <footer class="site-footer wrap">
   <div id="footerContact"></div>
   <div style="margin-top:4px">© <span id="year"></span> · <span id="footerText">Доклады и презентации на заказ</span></div>
+  <div class="footer-inn" id="footerInn">ИНН 300204777467</div>
 </footer>
 
 <!-- Кнопка поддержки -->
@@ -200,8 +201,8 @@
   </div>
 </div>
 
-<script src="config.js?v=4"></script>
-<script src="common.js?v=4"></script>
+<script src="config.js?v=5"></script>
+<script src="common.js?v=5"></script>
 <script>
 (function () {
   'use strict';
@@ -247,6 +248,8 @@
     $('pricesText').textContent = config.pricesText;
     $('pricesText').hidden = !config.pricesText;
     $('footerText').textContent = config.footerText;
+    $('footerInn').textContent = config.inn ? 'ИНН ' + config.inn : '';
+    $('footerInn').hidden = !config.inn;
     var supportHref = A.contactHref(config.support);
     document.querySelectorAll('[data-support]').forEach(function (a) {
       a.hidden = !supportHref;

@@ -28,6 +28,7 @@
     support: SUPPORT,
     note: 'Цена ориентировочная — точную сумму подтвержу, когда обсудим детали.',
     footerText: 'Доклады и презентации на заказ',
+    inn: '300204777467',
     services: [
       { id: 'report', name: 'Доклад', price: 1000,
         desc: 'Структурированный текст: введение, основная часть, выводы и список источников.' },
@@ -197,6 +198,7 @@
       support: text('support', 100),
       note: text('note', 600),
       footerText: text('footerText', 200),
+      inn: String(raw.inn == null ? d.inn : raw.inn).replace(/\D/g, '').slice(0, 12),
       services: services,
       options: options,
       urgency: {
