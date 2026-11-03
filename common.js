@@ -236,14 +236,19 @@
    * Цена услуги — ориентировочная, за весь проект.
    * input: { serviceId, deadline: 'YYYY-MM-DD', options: [id, ...] }
    */
-  function calcPrice(config, input, today) {
-    var service = null;
-    for (var i = 0; i < config.services.length; i++) {
-      if (config.services[i].id === input.serviceId) service = config.services[i];
-    }
-    if (!service) return { ok: false, service: null };
+  /** Выбранные услуги: serviceIds (массив) или старое поле serviceId. */
+  function pickedIds(input) {
+    if (Array.isArray(input.serviceIds)) return input.serviceIds.map(String);
+    return input.serviceId ? [String(input.serviceId)] : [];
+  }
 
-    var base = service.price;
+  function calcPrice(config, input, today) {
+    var ids = pickedIds(input);
+    var services = config.services.filter(function (s) { return ids.indexOf(s.id) !== -1; });
+    var other = str(input.other, 300);
+    if (!services.length && !other) return { ok: false, services: [], service: null, other: '' };
+
+    var base = services.reduce(function (sum, s) { return sum + s.price; }, 0);
     var chosen = config.options.filter(function (o) {
       return (input.options || []).indexOf(o.id) !== -1;
     });
@@ -251,12 +256,13 @@
 
     var daysLeft = input.deadline ? daysUntil(input.deadline, today) : null;
     var urgent = daysLeft !== null && daysLeft >= 0 && config.urgency.percent > 0 && daysLeft < config.urgency.days;
-    var urgencySum = urgent ? Math.round(base * config.urgency.percent / 100) : 0;
+    var urgencySum = urgent && base > 0 ? Math.round(base * config.urgency.percent / 100) : 0;
 
-    var total = round10(base + optionsSum + urgencySum);
+    var total = base > 0 ? round10(base + optionsSum + urgencySum) : 0; // только «Другое» — цена по договорённости
     var prepay = round10(total * config.prepay / 100);
     return {
-      ok: true, service: service, base: base, options: chosen, optionsSum: optionsSum,
+      ok: true, services: services, service: services[0] || null, other: other, negotiable: !!other,
+      base: base, options: chosen, optionsSum: optionsSum,
       daysLeft: daysLeft, urgent: urgent, urgencySum: urgencySum,
       total: total, prepay: prepay
     };
@@ -270,7 +276,8 @@
     var clean = {
       name: str(o.name, 100),
       contact: str(o.contact, 100),
-      serviceId: str(o.serviceId, 40),
+      serviceIds: pickedIds(o).slice(0, 30).map(function (x) { return str(x, 40); }),
+      other: str(o.other, 300),
       topic: str(o.topic, 300),
       volume: str(o.volume, 100),
       deadline: str(o.deadline, 10),
@@ -281,7 +288,8 @@
     };
     if (!clean.name) return { error: 'Укажите имя' };
     if (!contactKind(clean.contact)) return { error: 'Укажите Telegram (@username) или почту' };
-    if (!config.services.some(function (s) { return s.id === clean.serviceId; })) return { error: 'Выберите услугу' };
+    clean.serviceIds = config.services.filter(function (s) { return clean.serviceIds.indexOf(s.id) !== -1; }).map(function (s) { return s.id; });
+    if (!clean.serviceIds.length && !clean.other) return { error: 'Отметьте услугу или опишите в «Другое», что нужно' };
     if (!clean.topic) return { error: 'Укажите тему' };
     if (!isDateStr(clean.deadline)) return { error: 'Укажите дату, к которой нужна работа' };
     var dl = daysUntil(clean.deadline, today);
@@ -309,7 +317,9 @@
     return {
       id: String(id), created: created,
       name: clean.name, contact: clean.contact,
-      service: calc.service.name, volume: clean.volume,
+      service: calc.services.map(function (s) { return s.name; })
+        .concat(calc.other ? ['Другое: ' + calc.other] : []).join(', '),
+      volume: clean.volume,
       topic: clean.topic, subject: clean.subject, grade: clean.grade,
       deadline: clean.deadline,
       options: calc.options.map(function (o) { return o.name; }).join(', '),

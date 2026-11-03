@@ -1182,3 +1182,7 @@ a { color: var(--text); }
 .service.picked { box-shadow: 0 0 0 2px var(--text); }
 .service.picked [data-pick] { background: var(--text); color: var(--on-accent); }
 @media (min-width: 600px) { .svc-pick { grid-template-columns: repeat(4, 1fr); } .order-grid .svc-pick { grid-template-columns: repeat(2, 1fr); } }
+.svc-opt-other { grid-column: 1 / -1; }
+.svc-opt-other .svc-price { font-style: normal; }
+.svc-other { margin-top: 8px; animation: rise .4s var(--ease) both; }
+.svc-other textarea { min-height: 64px; }

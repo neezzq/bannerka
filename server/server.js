@@ -214,7 +214,7 @@ function payInfo(o) {
   const pending = (o.payments || []).some((x) => x.status === 'pending');
   return {
     id: o.id, service: o.service, topic: o.topic, deadline: o.deadline, status: o.status,
-    price: a.price, paid: a.paid, rest: a.rest,
+    price: a.price, paid: a.paid, rest: a.rest, agreed: a.price > 0,
     enabled: YK_ENABLED && o.status !== 'cancelled', receipt: YK_RECEIPT, pending
   };
 }
@@ -243,6 +243,7 @@ async function createPayment(o, p, ctx) {
   const a = C.payAmounts(o);
   const kind = 'full';
   const amount = a.rest; // всегда полная оплата (за вычетом уже оплаченного)
+  if (a.price < 1) throw C.ApiError('Стоимость ещё не согласована — я пришлю ссылку на оплату после обсуждения', 'pay');
   if (amount < 1) throw C.ApiError('Заказ уже оплачен полностью', 'pay');
 
   const value = amount.toFixed(2);
@@ -358,7 +359,7 @@ function orderText(o, title) {
   lines.push('📅 Срок: ' + h(C.fmtDate(o.deadline)) + h(left));
   if (o.options) lines.push('➕ ' + h(o.options));
   if (o.wishes) lines.push('💬 ' + h(o.wishes));
-  lines.push('💰 ' + h(C.money(o.price || o.calcPrice)) + (o.paid ? ' · оплачено ' + h(C.money(o.paid)) : ''));
+  lines.push('💰 ' + (C.num(o.price || o.calcPrice) > 0 ? h(C.money(o.price || o.calcPrice)) : 'по договорённости — укажите цену в админке') + (o.paid ? ' · оплачено ' + h(C.money(o.paid)) : ''));
   if (o.notes) lines.push('🗒 ' + h(o.notes));
   if (YK_ENABLED && SITE_URL && o.payToken && o.status !== 'cancelled' && C.payAmounts(o).rest > 0) {
     lines.push('', '💳 Ссылка на оплату для клиента:', h(payLink(o)));

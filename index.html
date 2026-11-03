@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="app.css?v=8">
+  <link rel="stylesheet" href="app.css?v=9">
 </head>
 <body>
 
@@ -114,10 +114,13 @@
 
         <div class="form-group-title">Работа</div>
         <div class="field">
-          <span class="field-label" id="svcLabel">Услуга <span class="req">*</span> <span class="muted" style="font-weight:400">— отметьте одну</span></span>
-          <div class="svc-pick" id="svcPick" role="radiogroup" aria-labelledby="svcLabel"></div>
-          <input type="hidden" id="f-service" name="serviceId">
-          <div class="err">Выберите услугу</div>
+          <span class="field-label" id="svcLabel">Услуга <span class="req">*</span> <span class="muted" style="font-weight:400">— можно несколько</span></span>
+          <div class="svc-pick" id="svcPick" role="group" aria-labelledby="svcLabel"></div>
+          <div class="svc-other" id="otherBox" hidden>
+            <label class="visually-hidden" for="f-other">Что нужно</label>
+            <textarea id="f-other" name="other" maxlength="300" rows="2" placeholder="Опишите, что нужно: например, реферат, конспект, сайт-визитка…"></textarea>
+          </div>
+          <div class="err" id="svcErr">Отметьте услугу или опишите в «Другое», что нужно</div>
         </div>
         <div class="field">
           <label for="f-topic">Тема <span class="req">*</span></label>
@@ -213,8 +216,8 @@
   </div>
 </div>
 
-<script src="config.js?v=8"></script>
-<script src="common.js?v=8"></script>
+<script src="config.js?v=9"></script>
+<script src="common.js?v=9"></script>
 <script>
 (function () {
   'use strict';
@@ -225,7 +228,7 @@
 
   var form = $('orderForm');
   var f = {
-    name: $('f-name'), contact: $('f-contact'), service: $('f-service'), topic: $('f-topic'),
+    name: $('f-name'), contact: $('f-contact'), topic: $('f-topic'),
     volume: $('f-volume'), deadline: $('f-deadline'), subject: $('f-subject'), grade: $('f-grade'),
     wishes: $('f-wishes'), website: $('f-website')
   };
@@ -304,16 +307,21 @@
   }
 
   function renderFormChoices() {
-    var current = f.service.value;
-    if (!config.services.some(function (s) { return s.id === current; })) current = '';
+    var current = pickedServices();
+    var otherOn = $('otherCheck') ? $('otherCheck').checked : false;
     $('svcPick').innerHTML = config.services.map(function (s) {
       return '<label class="svc-opt">' +
-        '<input type="radio" name="svc" value="' + A.esc(s.id) + '"' + (s.id === current ? ' checked' : '') + '>' +
+        '<input type="checkbox" name="svc" value="' + A.esc(s.id) + '"' + (current.indexOf(s.id) !== -1 ? ' checked' : '') + '>' +
         '<span class="svc-tick" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>' +
         '<span class="svc-name">' + A.esc(s.name) + '</span>' +
         '<span class="svc-price">≈ ' + A.money(s.price) + '</span></label>';
-    }).join('');
-    f.service.value = current;
+    }).join('') +
+      '<label class="svc-opt svc-opt-other">' +
+        '<input type="checkbox" id="otherCheck"' + (otherOn ? ' checked' : '') + '>' +
+        '<span class="svc-tick" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>' +
+        '<span class="svc-name">Другое</span>' +
+        '<span class="svc-price">впишу сам</span></label>';
+    $('otherBox').hidden = !otherOn;
     markPicked();
 
     var checked = selectedOptions();
@@ -325,21 +333,28 @@
     }).join('');
   }
 
-  /** Отмечаем выбранную услугу и в карточках цен. */
+  function pickedServices() {
+    return Array.prototype.map.call(form.querySelectorAll('input[name="svc"]:checked'), function (x) { return x.value; });
+  }
+
+  /** Отмечаем выбранные услуги и в карточках цен. */
   function markPicked() {
-    var id = f.service.value;
+    var ids = pickedServices();
     document.querySelectorAll('[data-pick]').forEach(function (b) {
-      var on = b.getAttribute('data-pick') === id;
+      var on = ids.indexOf(b.getAttribute('data-pick')) !== -1;
       b.closest('.service').classList.toggle('picked', on);
-      b.textContent = on ? '✓ Выбрано' : 'Выбрать';
+      b.textContent = on ? '✓ В заявке' : 'Выбрать';
     });
   }
 
-  function pickService(id) {
+  /** Кнопка «Выбрать» в карточке цены: добавить услугу в заявку или убрать. */
+  function toggleService(id) {
     var r = form.querySelector('input[name="svc"][value="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
-    if (r) r.checked = true;
+    if (!r) return false;
+    r.checked = !r.checked;
     $('svcPick').closest('.field').classList.remove('invalid');
     updateSummary();
+    return r.checked;
   }
 
   function selectedOptions() {
@@ -347,11 +362,11 @@
   }
 
   function readForm() {
-    var r = form.querySelector('input[name="svc"]:checked');
-    f.service.value = r ? r.value : '';
     markPicked();
+    var otherOn = $('otherCheck') && $('otherCheck').checked;
     return {
-      name: f.name.value, contact: f.contact.value, serviceId: f.service.value, topic: f.topic.value,
+      name: f.name.value, contact: f.contact.value, serviceIds: pickedServices(),
+      other: otherOn ? $('f-other').value.trim() : '', topic: f.topic.value,
       volume: f.volume.value, deadline: f.deadline.value, subject: f.subject.value, grade: f.grade.value,
       wishes: f.wishes.value, options: selectedOptions(), website: f.website.value
     };
@@ -365,12 +380,15 @@
       lastTotal = null;
       $('summaryBody').innerHTML =
         '<div class="summary-total">— <small>₽</small></div>' +
-        '<p class="summary-empty">Выберите услугу — цена посчитается автоматически.</p>' +
+        '<p class="summary-empty">' + ($('otherCheck') && $('otherCheck').checked ? 'Опишите в «Другое», что нужно, — цену назову после обсуждения.' : 'Отметьте услуги — цена посчитается автоматически.') + '</p>' +
         (config.note ? '<p class="summary-note">' + A.esc(config.note) + '</p>' : '');
       return;
     }
     var lines = [];
-    lines.push('<li><span>' + A.esc(c.service.name) + ' (весь проект)</span><span>' + A.money(c.base) + '</span></li>');
+    c.services.forEach(function (sv) {
+      lines.push('<li><span>' + A.esc(sv.name) + '</span><span>' + A.money(sv.price) + '</span></li>');
+    });
+    if (c.other) lines.push('<li><span>Другое: ' + A.esc(c.other) + '</span><span>по договорённости</span></li>');
     c.options.forEach(function (o) {
       lines.push('<li><span>' + A.esc(o.name) + '</span><span>+' + A.money(o.price) + '</span></li>');
     });
@@ -379,7 +397,7 @@
       lines.push('<li class="urgent"><span>Срочность (' + when + '), +' + config.urgency.percent + '%</span><span>+' + A.money(c.urgencySum) + '</span></li>');
     }
     $('summaryBody').innerHTML =
-      '<div class="summary-total' + (lastTotal !== null && lastTotal !== c.total ? ' pop' : '') + '">≈ ' + A.money(c.total) + '</div>' +
+      '<div class="summary-total' + (lastTotal !== null && lastTotal !== c.total ? ' pop' : '') + '">' + (c.total > 0 ? '≈ ' + A.money(c.total) + (c.negotiable ? ' <small>+ другое</small>' : '') : '<span style="font-size:.6em">По договорённости</span>') + '</div>' +
       '<ul class="summary-lines">' + lines.join('') + '</ul>' +
       (config.note ? '<p class="summary-note">' + A.esc(config.note) + '</p>' : '');
     lastTotal = c.total;
@@ -403,9 +421,14 @@
   $('servicesGrid').addEventListener('click', function (e) {
     var btn = e.target.closest('[data-pick]');
     if (!btn) return;
-    pickService(btn.getAttribute('data-pick'));
-    document.getElementById('order').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setTimeout(function () { (f.name.value ? f.topic : f.name).focus({ preventScroll: true }); }, 450);
+    var added = toggleService(btn.getAttribute('data-pick'));
+    A.toast(added ? 'Добавлено в заявку' : 'Убрано из заявки');
+  });
+
+  form.addEventListener('change', function (e) {
+    if (e.target.id !== 'otherCheck') return;
+    $('otherBox').hidden = !e.target.checked;
+    if (e.target.checked) setTimeout(function () { $('f-other').focus(); }, 50);
   });
 
   form.addEventListener('input', function (e) {
@@ -426,11 +449,13 @@
     var dl = A.daysUntil(f.deadline.value);
     check(f.name, f.name.value.trim().length > 0);
     check(f.contact, !!A.contactKind(f.contact.value));
-    check($('svcPick'), !!f.service.value);
+    var otherOn = $('otherCheck').checked, otherText = $('f-other').value.trim();
+    $('svcErr').textContent = otherOn && !otherText ? 'Опишите в «Другое», что нужно' : 'Отметьте услугу или опишите в «Другое», что нужно';
+    check($('svcPick'), (pickedServices().length > 0 || (otherOn && otherText)) && !(otherOn && !otherText));
     check(f.topic, f.topic.value.trim().length > 0);
     check(f.deadline, dl !== null && dl >= 0 && dl <= 730);
     if (bad.length) {
-      (bad[0].id === 'svcPick' ? bad[0].querySelector('input') : bad[0]).focus({ preventScroll: true });
+      (bad[0].id === 'svcPick' ? ($('otherCheck').checked && !$('f-other').value.trim() ? $('f-other') : bad[0].querySelector('input')) : bad[0]).focus({ preventScroll: true });
       bad[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     return !bad.length;
@@ -450,11 +475,11 @@
     A.api('order', { order: input }).then(function (res) {
       A.lsSet(CLIENT_KEY, { name: input.name.trim(), contact: input.contact.trim() });
       var total = res.total != null ? res.total : calc.total;
-      var service = config.services.filter(function (x) { return x.id === input.serviceId; })[0];
-      saveMyOrder({ id: String(res.id), service: service ? service.name : '', topic: input.topic.trim(), total: total, payToken: res.payToken || '', created: A.todayStr() });
+      var names = calc.ok ? calc.services.map(function (x) { return x.name; }).concat(calc.other ? ['Другое'] : []).join(', ') : '';
+      saveMyOrder({ id: String(res.id), service: names, topic: input.topic.trim(), total: total, payToken: res.payToken || '', created: A.todayStr() });
       $('doneId').textContent = '№' + (res.id || '—');
-      $('doneTotal').textContent = '≈ ' + A.money(total);
-      var canPay = !!(config.payEnabled && res.payToken);
+      $('doneTotal').textContent = total > 0 ? '≈ ' + A.money(total) + (calc.negotiable ? ' + «Другое» по договорённости' : '') : 'по договорённости';
+      var canPay = !!(config.payEnabled && res.payToken && total > 0);
       $('donePayBtn').hidden = !canPay;
       if (canPay) {
         $('donePayBtn').href = payHref(res.id, res.payToken);
@@ -469,6 +494,7 @@
       // Очищаем поля заказа, имя и контакт оставляем
       [f.topic, f.volume, f.deadline, f.subject, f.grade, f.wishes].forEach(function (el) { el.value = ''; });
       form.querySelectorAll('input[name="svc"]').forEach(function (x) { x.checked = false; });
+      $('otherCheck').checked = false; $('f-other').value = ''; $('otherBox').hidden = true;
       form.querySelectorAll('input[name="options"]').forEach(function (x) { x.checked = false; });
       updateSummary();
     }).catch(function (err) {
@@ -502,7 +528,7 @@
         '<div class="my-order-info"><b>' + A.esc(o.service || 'Заявка') + (o.topic ? ' · ' + A.esc(o.topic) : '') + '</b>' +
           A.esc(A.fmtDate(o.created)) + (o.total ? ' · ≈ ' + A.money(o.total) : '') + '</div>' +
         '<div class="my-order-actions">' +
-          (config.payEnabled && o.payToken ? '<a class="btn btn-primary" href="' + A.esc(payHref(o.id, o.payToken)) + '">Оплатить</a>' : '') +
+          (config.payEnabled && o.payToken && o.total > 0 ? '<a class="btn btn-primary" href="' + A.esc(payHref(o.id, o.payToken)) + '">Оплатить</a>' : '') +
           (write ? '<a class="btn btn-soft" href="' + A.esc(write) + '" target="_blank" rel="noopener">Написать</a>' : '') +
         '</div></div>';
     }).join('');
