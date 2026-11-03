@@ -136,9 +136,28 @@
     return (prefix || 'id') + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   }
 
-  /** Ссылка для контакта: @ник → t.me, телефон → tel: */
+  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[A-Za-zА-Яа-яЁё]{2,}$/;
+  var TG_RE = /^(?:@|(?:https?:\/\/)?(?:t\.me|telegram\.me)\/)?([A-Za-z][A-Za-z0-9_]{3,31})\/?$/i;
+
+  /** Контакт клиента: Telegram (@ник или ссылка t.me) или почта. */
+  function contactKind(contact) {
+    var c = String(contact || '').trim();
+    if (EMAIL_RE.test(c)) return 'email';
+    if (TG_RE.test(c)) return 'tg';
+    return '';
+  }
+
+  /** Ссылка «написать по заказу №N» в Telegram поддержки. */
+  function orderMessageHref(support, orderId) {
+    var href = contactHref(support);
+    if (!href || href.indexOf('https://t.me/') !== 0) return href;
+    return href + '?text=' + encodeURIComponent('Здравствуйте! Пишу по заказу №' + orderId);
+  }
+
+  /** Ссылка для контакта: @ник → t.me, почта → mailto:, телефон → tel: */
   function contactHref(contact) {
     var c = String(contact || '').trim();
+    if (EMAIL_RE.test(c)) return 'mailto:' + c;
     var tme = c.match(/^(?:https?:\/\/)?(?:t\.me|telegram\.me)\/([A-Za-z0-9_]{4,32})\/?$/i);
     if (tme) return 'https://t.me/' + tme[1];
     var nick = c.match(/^@([A-Za-z0-9_]{4,32})$/);
@@ -205,7 +224,7 @@
         days: Math.round(clampNum(u.days, 0, 60, d.urgency.days)),
         percent: Math.round(clampNum(u.percent, 0, 500, d.urgency.percent))
       },
-      prepay: Math.round(clampNum(raw.prepay, 0, 100, d.prepay)),
+      prepay: 0, // только полная оплата
       // Включена ли онлайн-оплата — решает сервер (есть ли ключи ЮKassa), из админки не меняется.
       payEnabled: raw.payEnabled === true
     };
@@ -261,7 +280,7 @@
       options: (Array.isArray(o.options) ? o.options : []).map(function (x) { return str(x, 40); })
     };
     if (!clean.name) return { error: 'Укажите имя' };
-    if (clean.contact.length < 3) return { error: 'Укажите Telegram или телефон' };
+    if (!contactKind(clean.contact)) return { error: 'Укажите Telegram (@username) или почту' };
     if (!config.services.some(function (s) { return s.id === clean.serviceId; })) return { error: 'Выберите услугу' };
     if (!clean.topic) return { error: 'Укажите тему' };
     if (!isDateStr(clean.deadline)) return { error: 'Укажите дату, к которой нужна работа' };
@@ -349,7 +368,8 @@
     statusLabel: statusLabel,
     esc: esc, num: num, str: str, money: money, plural: plural,
     todayStr: todayStr, nowStamp: nowStamp, addDays: addDays, daysUntil: daysUntil, fmtDate: fmtDate,
-    isDateStr: isDateStr, contactHref: contactHref, uid: uid, pad: pad
+    isDateStr: isDateStr, contactHref: contactHref, contactKind: contactKind, orderMessageHref: orderMessageHref,
+    uid: uid, pad: pad
   };
 
   // На сервере (Node.js) браузерная часть не нужна.
@@ -580,12 +600,64 @@
 
   registerServiceWorker();
 
+  /* ---------- Чёрная тема ---------- */
+
+  var THEME_KEY = 'zk_theme';
+  var darkMq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+  function currentTheme() {
+    var t = document.documentElement.getAttribute('data-theme');
+    if (t === 'dark' || t === 'light') return t;
+    return darkMq && darkMq.matches ? 'dark' : 'light';
+  }
+
+  function syncThemeColor() {
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', currentTheme() === 'dark' ? '#000000' : (document.body.classList.contains('admin') ? '#ffffff' : '#f5f5f7'));
+  }
+
+  function toggleTheme() {
+    var next = currentTheme() === 'dark' ? 'light' : 'dark';
+    var root = document.documentElement;
+    root.classList.add('theme-anim');
+    root.setAttribute('data-theme', next);
+    lsSet(THEME_KEY, next);
+    syncThemeColor();
+    setTimeout(function () { root.classList.remove('theme-anim'); }, 500);
+  }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('[data-theme-toggle]');
+    if (btn) toggleTheme();
+  });
+  if (darkMq && darkMq.addEventListener) darkMq.addEventListener('change', syncThemeColor);
+  document.addEventListener('DOMContentLoaded', syncThemeColor);
+
+  /* ---------- Плавное появление блоков при прокрутке ---------- */
+
+  function reveal(selector, root) {
+    var els = (root || document).querySelectorAll(selector);
+    if (!('IntersectionObserver' in window) || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    var io = reveal.io || (reveal.io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 }));
+    Array.prototype.forEach.call(els, function (el) {
+      if (el.classList.contains('reveal')) return;
+      var sibs = Array.prototype.filter.call(el.parentNode.children, function (x) { return x.matches(selector); });
+      el.style.setProperty('--d', (Math.min(sibs.indexOf(el), 6) * 0.07) + 's');
+      el.classList.add('reveal');
+      io.observe(el);
+    });
+  }
+
   window.App = Object.assign({}, shared, {
     DEMO: DEMO,
     api: api,
     loadConfig: loadConfig,
     lsGet: lsGet, lsSet: lsSet, lsDel: lsDel,
-    mountDemoBanner: mountDemoBanner, toast: toast,
+    mountDemoBanner: mountDemoBanner, toast: toast, reveal: reveal, toggleTheme: toggleTheme,
     showIosInstallHint: showIosInstallHint, isStandalone: isStandalone
   });
 })();

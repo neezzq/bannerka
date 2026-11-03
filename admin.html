@@ -6,6 +6,7 @@
   <title>Админка — заявки</title>
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#ffffff">
+  <script>try{var t=JSON.parse(localStorage.getItem('zk_theme'));if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
 
   <link rel="manifest" href="admin-manifest.json">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/admin-192.png">
@@ -18,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="app.css?v=6">
+  <link rel="stylesheet" href="app.css?v=7">
 </head>
 <body class="admin">
 
@@ -54,6 +55,10 @@
         <button type="button" class="top-tab" data-tab="prices">Цены</button>
         <button type="button" class="top-tab" data-tab="report">Итоги</button>
       </nav>
+      <button type="button" class="theme-btn" data-theme-toggle aria-label="Сменить тему" title="Светлая / тёмная тема">
+        <svg class="i-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></svg>
+        <svg class="i-moon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"/></svg>
+      </button>
       <button type="button" class="icon-btn" id="refreshBtn" title="Обновить" aria-label="Обновить">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
       </button>
@@ -98,7 +103,7 @@
             <button type="button" class="btn btn-soft add-btn" id="addOpt">+ Добавить опцию</button>
           </div>
           <div class="panel card">
-            <h2>Срочность и предоплата</h2>
+            <h2>Срочность</h2>
             <div class="inline-fields">
               <div class="field">
                 <label for="urgDays">Если до срока меньше, дн.</label>
@@ -107,10 +112,6 @@
               <div class="field">
                 <label for="urgPercent">Наценка, %</label>
                 <input id="urgPercent" type="text" inputmode="numeric" data-cfg>
-              </div>
-              <div class="field">
-                <label for="prepay">Предоплата, %</label>
-                <input id="prepay" type="text" inputmode="numeric" data-cfg>
               </div>
             </div>
           </div>
@@ -201,8 +202,8 @@
   </nav>
 </div>
 
-<script src="config.js?v=6"></script>
-<script src="common.js?v=6"></script>
+<script src="config.js?v=7"></script>
+<script src="common.js?v=7"></script>
 <script>
 (function () {
   'use strict';
@@ -665,7 +666,6 @@
     $('optList').innerHTML = c.options.length ? c.options.map(optHtml).join('') : '<p class="muted" style="font-size:14px">Опций нет.</p>';
     $('urgDays').value = c.urgency.days;
     $('urgPercent').value = c.urgency.percent;
-    $('prepay').value = c.prepay;
     $('tTitle').value = c.heroTitle;
     $('tSubtitle').value = c.heroSubtitle;
     $('tContact').value = c.contact;
@@ -695,7 +695,6 @@
       services: items('svcList', ['name', 'price', 'desc']),
       options: items('optList', ['name', 'price']),
       urgency: { days: $('urgDays').value, percent: $('urgPercent').value },
-      prepay: $('prepay').value,
       heroTitle: $('tTitle').value,
       heroSubtitle: $('tSubtitle').value,
       contact: $('tContact').value,
@@ -770,10 +769,9 @@
       if (!o.name.trim()) problems.push('Укажите название опции ' + (i + 1));
       if (!isNonNegNumber(o.price)) problems.push('Проверьте цену опции ' + (i + 1));
     });
-    [raw.urgency.days, raw.urgency.percent, raw.prepay].forEach(function (v) {
-      if (!isNonNegNumber(v)) problems.push('Срочность и предоплата — только числа');
+    [raw.urgency.days, raw.urgency.percent].forEach(function (v) {
+      if (!isNonNegNumber(v)) problems.push('Срочность — только числа');
     });
-    if (A.num(raw.prepay) > 100) problems.push('Предоплата не может быть больше 100%');
     if (raw.inn.trim() && !/^(\d{10}|\d{12})$/.test(raw.inn.trim())) problems.push('ИНН — 10 или 12 цифр');
     if (problems.length) { A.toast(problems[0], 'error'); return; }
 
